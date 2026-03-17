@@ -1,29 +1,42 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 19,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "vs2026-x64-debug",
-      "displayName": "VS 2026 x64 Debug",
-      "description": "Configure with Visual Studio x64 so Qt6 msvc2022_64 can be resolved.",
-      "generator": "Visual Studio 18 2026",
-      "architecture": "x64",
-      "binaryDir": "${sourceDir}/build-vs-x64",
-      "cacheVariables": {
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "vs2026-x64-debug-build",
-      "displayName": "Build VS 2026 x64 Debug",
-      "configurePreset": "vs2026-x64-debug",
-      "configuration": "Debug"
-    }
-  ]
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 19,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "vs2026-x64-debug",
+            "displayName": "VS 2026 x64 Debug",
+            "description": "Configure with Visual Studio x64 so Qt6 msvc2022_64 can be resolved.",
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build-vs-x64",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+            }
+        },
+        {
+            "name": "clang-x64-debug",
+            "displayName": "Clang 16.0.0 x86_64-apple-darwin24.0.0",
+            "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
+            "binaryDir": "${sourceDir}/build-clang-x64",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "vs2026-x64-debug-build",
+            "displayName": "Build VS 2026 x64 Debug",
+            "configurePreset": "vs2026-x64-debug",
+            "configuration": "Debug"
+        }
+    ]
 }
