@@ -150,13 +150,13 @@ if(Qt6_QMAKE_EXECUTABLE)
     )
     
     # Set CMake prefix path for Qt6 modules
-    list(APPEND CMAKE_PREFIX_PATH "${Qt6_ROOT_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${Qt6_ROOT_DIR}" "${Qt6_ROOT_DIR}/lib/cmake" "${Qt6_ROOT_DIR}/lib/cmake/Qt6")
     
     # Find requested components
     if(Qt6_FIND_COMPONENTS)
         foreach(component ${Qt6_FIND_COMPONENTS})
-            message(STATUS "Looking for Qt6 component: ${component} in ${Qt6_ROOT_DIR}/lib/cmake")
-            find_package(Qt6${component} QUIET PATHS ${Qt6_ROOT_DIR}/lib/cmake)
+            message(STATUS "Looking for Qt6 component: ${component} in ${Qt6_ROOT_DIR}")
+            find_package(Qt6${component} QUIET PATHS ${Qt6_ROOT_DIR})
             if(Qt6${component}_FOUND)
                 list(APPEND Qt6_LIBRARIES Qt6::${component})
                 set(Qt6_${component}_FOUND TRUE)
