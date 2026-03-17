@@ -82,3 +82,7 @@ CMakeLists.txt.user*
 .uic/
 /build*/
 /.qtcreator/
+
+# Clang-d
+compile_commands.json
+.cache/*
