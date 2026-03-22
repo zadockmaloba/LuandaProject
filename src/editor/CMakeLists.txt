@@ -19,6 +19,7 @@ target_link_libraries(LuandaEditor
         Qt::Core
         Qt::Widgets
         Qt::OpenGLWidgets
+        LuandaEngine
 )
 
 if(WIN32)

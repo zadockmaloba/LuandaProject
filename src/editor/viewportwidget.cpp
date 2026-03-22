@@ -15,10 +15,11 @@ ViewPortWidget::ViewPortWidget(QWidget *parent)
     : QWidget{parent},
       _p{new ViewPortWidgetPrivate} {
 
-    this->setGeometry(0, 0, 800, 600);
+    this->setBaseSize(800, 600);
 
     auto main_layout = _p->main_layout.get();
     auto opengl_widget = _p->opengl_widget.get();
+    opengl_widget->setBaseSize(800, 600);
 
     this->setLayout(main_layout);
     main_layout->addWidget(opengl_widget, 1);
