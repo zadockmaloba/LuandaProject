@@ -1,0 +1,21 @@
+# Swift
+.build/
+*.xcodeproj
+*.xcworkspace
+*.xcuserstate
+*.xcconfig
+*.xcscheme
+*.xcodeproj/*
+*.xcworkspace/*
+*.xcuserstate/*
+*.xcconfig/*
+*.xcscheme/*
+*.swiftpm
+*.playground
+*.playgroundbook
+*.swift-version
+*.swiftlint.yml
+*.swiftformat
+*.swiftformat.yml
+*.swiftlint
+*.swiftlint.yml

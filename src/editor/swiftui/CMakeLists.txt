@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.26...4.2)
 project(LuandaEditorSwift LANGUAGES CXX Swift)
 
 # Verify that we have a new enough compiler
@@ -21,3 +21,9 @@ include(InitializeSwift)
 # C++ bridging header
 include(AddSwift)
 
+add_executable(LuandaEditor LuandaEditor.swift)
+
+# Add Swift compiler flags
+target_compile_options(LuandaEditor PRIVATE
+    $<$<COMPILE_LANGUAGE:Swift>:-parse-as-library>
+)

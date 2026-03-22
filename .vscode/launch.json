@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LuandaProject}",
+            "name": "Debug LuandaEditor",
+            "target": "LuandaEditor",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug LuandaEditor"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LuandaProject}",
+            "name": "Release LuandaEditor",
+            "target": "LuandaEditor",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release LuandaEditor"
+        }
+    ]
+}
