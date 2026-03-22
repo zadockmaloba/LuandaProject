@@ -13,7 +13,11 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
+
+set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0)
+set(BUNDLE_IDENTIFIER "com.luandaproject.luanda-editor")
+set(BUNDLE_NAME "Luanda")
+# set(ICON_FILE "icon.icns")
 
 # Set up swiftrt.o and runtime library search paths
 include(InitializeSwift)

@@ -15,3 +15,5 @@ struct LuandaEditor: App {
         }
     }
 }
+
+#Preview { ContentView() }
