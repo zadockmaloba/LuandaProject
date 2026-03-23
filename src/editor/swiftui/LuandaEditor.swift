@@ -36,8 +36,7 @@ struct ContentView: View {
         NavigationSplitView {
             SideBarView()
         } detail: {
-            MetalView(color: .blue)
-                .edgesIgnoringSafeArea(.all)
+            MetalView(color: .black)
         }
     }
 }
