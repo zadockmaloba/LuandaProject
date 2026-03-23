@@ -13,18 +13,22 @@ struct SideBarView: View {
             Text("Hierarchy")
                 .tabItem {
                     Label("Hierarchy", systemImage: "list.bullet")
+                        .labelStyle(.titleAndIcon)
                 }
             Text("Scene")
                 .tabItem {
                     Label("Scene", systemImage: "cube")
+                        .labelStyle(.titleAndIcon)
                 }
             Text("Assets")
                 .tabItem {
                     Label("Assets", systemImage: "photo.on.rectangle")
+                        .labelStyle(.titleAndIcon)
                 }
             Text("Inspector")
                 .tabItem {
                     Label("Inspector", systemImage: "slider.horizontal.3")
+                        .labelStyle(.titleAndIcon)
                 }
         }
         .frame(minWidth: 200)
