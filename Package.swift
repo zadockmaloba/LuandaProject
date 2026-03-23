@@ -25,7 +25,9 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedFramework("Foundation"),
-                .linkedFramework("SwiftUI")
+                .linkedFramework("SwiftUI"),
+                .linkedFramework("Metal"),
+                .linkedFramework("Symbols")
             ]
         )
     ]
