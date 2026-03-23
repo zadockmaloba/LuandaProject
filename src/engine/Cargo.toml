@@ -7,3 +7,10 @@ edition = "2024"
 crate-type = ["staticlib"]
 
 [dependencies]
+objc2-metal = "0.3.2"
+
+[features]
+metal = ["objc2-metal"]
+vulkan = ["ash"]
+dx12 = ["windows", "d3d12"]
+opengl = ["gl"]
