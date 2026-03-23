@@ -25,7 +25,10 @@ include(InitializeSwift)
 # C++ bridging header
 include(AddSwift)
 
-add_executable(LuandaEditor MACOSX_BUNDLE LuandaEditor.swift)
+add_executable(LuandaEditor MACOSX_BUNDLE 
+    LuandaEditor.swift
+    MetalView.swift
+)
 
 set_target_properties(LuandaEditor PROPERTIES
     MACOSX_BUNDLE TRUE
