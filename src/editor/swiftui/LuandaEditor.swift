@@ -7,15 +7,34 @@ struct SettingsView: View {
     }
 }
 
+struct SideBarView: View {
+    var body: some View {
+        TabView {
+            Text("Hierarchy")
+                .tabItem {
+                    Label("Hierarchy", systemImage: "list.bullet")
+                }
+            Text("Scene")
+                .tabItem {
+                    Label("Scene", systemImage: "cube")
+                }
+            Text("Assets")
+                .tabItem {
+                    Label("Assets", systemImage: "photo.on.rectangle")
+                }
+            Text("Inspector")
+                .tabItem {
+                    Label("Inspector", systemImage: "slider.horizontal.3")
+                }
+        }
+        .frame(minWidth: 200)
+    }
+}
+
 struct ContentView: View {
     var body: some View {
         NavigationSplitView {
-            List {
-                Text("Item 1")
-                Text("Item 2")
-                Text("Item 3")
-            }
-            .listStyle(SidebarListStyle())
+            SideBarView()
         } detail: {
             MetalView(color: .blue)
                 .edgesIgnoringSafeArea(.all)
