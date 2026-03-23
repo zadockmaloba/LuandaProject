@@ -25,7 +25,16 @@ include(InitializeSwift)
 # C++ bridging header
 include(AddSwift)
 
-add_executable(LuandaEditor LuandaEditor.swift)
+add_executable(LuandaEditor MACOSX_BUNDLE LuandaEditor.swift)
+
+set_target_properties(LuandaEditor PROPERTIES
+    MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_BUNDLE_NAME "${BUNDLE_NAME}"
+    MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "${BUNDLE_IDENTIFIER}"
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/cmake/Info.plist.in"
+)
 
 # Add Swift compiler flags
 target_compile_options(LuandaEditor PRIVATE
