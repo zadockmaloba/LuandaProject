@@ -43,7 +43,7 @@ struct SideBarView: View {
 }
 
 struct ContentView: View {
-    @State private var showInspector = true
+    @State private var showInspector = false
     var body: some View {
         NavigationSplitView {
             SideBarView()
