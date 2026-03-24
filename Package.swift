@@ -16,9 +16,14 @@ let package = Package(
         // Add your Swift package dependencies here
     ],
     targets: [
+        .target(
+            name: "LuandaBridge",
+            path: "src/editor/swiftui",
+            publicHeadersPath: "include"
+        ),
         .executableTarget(
             name: "LuandaEditor",
-            //dependencies: ["SwiftUI"],
+            dependencies: ["LuandaBridge"],
             path: "src/editor/swiftui",
             resources: [
                 // Add resources here if needed

@@ -25,10 +25,18 @@ include(InitializeSwift)
 # C++ bridging header
 include(AddSwift)
 
-add_executable(LuandaEditor MACOSX_BUNDLE 
+add_executable(LuandaEditor MACOSX_BUNDLE
     LuandaEditor.swift
     MetalView.swift
 )
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Expose the Objective-C bridging header so Swift sources can call C functions
+set_property(TARGET LuandaEditor PROPERTY SWIFT_OBJC_BRIDGING_HEADER
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/LuandaBridge.h")
 
 set_target_properties(LuandaEditor PROPERTIES
     MACOSX_BUNDLE TRUE
@@ -42,4 +50,12 @@ set_target_properties(LuandaEditor PROPERTIES
 # Add Swift compiler flags
 target_compile_options(LuandaEditor PRIVATE
     $<$<COMPILE_LANGUAGE:Swift>:-parse-as-library>
+    $<$<COMPILE_LANGUAGE:Swift>:-Xlinker>
+    $<$<COMPILE_LANGUAGE:Swift>:-debug_dylib>
 )
+
+# Link the static library
+target_link_libraries(LuandaEditor LuandaEngine
+)
+
+add_dependencies(LuandaEditor LuandaEngine)

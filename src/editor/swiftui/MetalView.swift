@@ -1,3 +1,4 @@
+import LuandaBridge
 // REF: https://medium.com/@giikwebdeveloper/metal-view-for-swiftui-93f5f78ec36a
 import MetalKit
 import SwiftUI
@@ -10,6 +11,7 @@ class MetalViewCoordinator: NSObject, MTKViewDelegate {
   // including command queues are reused, especially in performance-sensitive
   // code.
   let commandQueue: MTLCommandQueue
+  var rustRenderer: UnsafeMutableRawPointer? = nil
 
   override init() {
     guard let device = MTLCreateSystemDefaultDevice(),
@@ -23,7 +25,12 @@ class MetalViewCoordinator: NSObject, MTKViewDelegate {
     // identical.
     self.device = device
     self.commandQueue = queue
+    self.rustRenderer = luanda_renderer_create(device)
     super.init()
+  }
+
+  deinit {
+    luanda_renderer_destroy(self.rustRenderer)
   }
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -32,23 +39,16 @@ class MetalViewCoordinator: NSObject, MTKViewDelegate {
   // directly. Rather, we request for it to be called by calling the draw() method of
   // the wrapped MTKView.
   func draw(in view: MTKView) {
-    guard let buffer = self.commandQueue.makeCommandBuffer(),
-      let descriptor = view.currentRenderPassDescriptor,
-      let encoder = buffer.makeRenderCommandEncoder(descriptor: descriptor)
-    else {
-      fatalError("could not create buffer, render pass descriptor, or encoder")
-    }
-    encoder.endEncoding()
-    if let drawable = view.currentDrawable {
-      buffer.present(drawable)
-      buffer.commit()
-    }
+    luanda_renderer_draw(
+      self.rustRenderer,
+      view.currentRenderPassDescriptor
+    )
   }
 }
 
 struct MetalView: NSViewRepresentable {
   @Environment(\.self) var environment  // needed to resolve Color instances
-  var color: Color                      // allows us to inject a clear color
+  var color: Color  // allows us to inject a clear color
 
   func makeCoordinator() -> MetalViewCoordinator {
     MetalViewCoordinator()

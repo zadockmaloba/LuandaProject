@@ -7,6 +7,13 @@ struct SettingsView: View {
     }
 }
 
+struct InspectorView: View {
+    var body: some View {
+        Text("Inspector")
+            .frame(minWidth: 300, minHeight: 400)
+    }
+}
+
 struct SideBarView: View {
     var body: some View {
         TabView {
@@ -36,12 +43,13 @@ struct SideBarView: View {
 }
 
 struct ContentView: View {
+    @State private var showInspector = true
     var body: some View {
         NavigationSplitView {
             SideBarView()
         } detail: {
             MetalView(color: .black)
-        }
+        }.inspector(isPresented: $showInspector, content: { InspectorView() })
     }
 }
 
