@@ -147,6 +147,7 @@ pub extern "C" fn luanda_renderer_create(
         let device = NonNull::new(device).expect("Null device");
         Retained::retain(device.as_ptr()).expect("Failed to retain device")
     };
+    println!("Creating MetalRenderer");
     Box::into_raw(Box::new(MetalRenderer::new(retained_device)))
 }
 
@@ -162,5 +163,6 @@ pub extern "C" fn luanda_renderer_draw(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn luanda_renderer_destroy(renderer: *mut MetalRenderer) {
+    println!("Destroying MetalRenderer");
     unsafe { drop(Box::from_raw(renderer)) };
 }
