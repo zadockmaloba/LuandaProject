@@ -23,6 +23,9 @@ let package = Package(
             resources: [
                 // Add resources here if needed
             ],
+            swiftSettings: [
+                .unsafeFlags(["-Xlinker", "-debug_dylib"])
+            ],
             linkerSettings: [
                 .linkedFramework("Foundation"),
                 .linkedFramework("SwiftUI"),
