@@ -41,7 +41,8 @@ class MetalViewCoordinator: NSObject, MTKViewDelegate {
   func draw(in view: MTKView) {
     luanda_renderer_draw(
       self.rustRenderer,
-      view.currentRenderPassDescriptor
+      view.currentRenderPassDescriptor,
+      view.currentDrawable
     )
   }
 }

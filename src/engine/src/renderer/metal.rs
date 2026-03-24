@@ -49,7 +49,7 @@ impl MetalRenderer {
         }
     }
     
-    pub fn draw(&self, descriptor: &MTLRenderPassDescriptor) {
+    pub fn draw(&self, descriptor: &MTLRenderPassDescriptor, drawable: &ProtocolObject<dyn MTLDrawable>) {
         let command_buffer = self.command_queue.commandBuffer()
             .expect("Failed to create command buffer");
         
@@ -70,6 +70,8 @@ impl MetalRenderer {
         }
         
         encoder.endEncoding();
+
+        command_buffer.presentDrawable(drawable);
         command_buffer.commit();
     }
     
@@ -155,10 +157,12 @@ pub extern "C" fn luanda_renderer_create(
 pub extern "C" fn luanda_renderer_draw(
     renderer: *mut MetalRenderer,
     descriptor: *const MTLRenderPassDescriptor,
+    drawable: *const ProtocolObject<dyn MTLDrawable>,
 ) {
     let renderer = unsafe { &*renderer };
     let descriptor = unsafe { &*descriptor };
-    renderer.draw(descriptor);
+    let drawable = unsafe { &*drawable };
+    renderer.draw(descriptor, drawable);
 }
 
 #[unsafe(no_mangle)]
