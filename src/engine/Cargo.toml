@@ -10,3 +10,5 @@ crate-type = ["staticlib"]
 objc2-metal = "0.3.2"
 objc2-foundation = "0.3.2"
 objc2 = "0.6.4"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_yml = "0.0.12"

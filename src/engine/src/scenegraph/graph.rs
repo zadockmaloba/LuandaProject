@@ -1,0 +1,159 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Mesh {
+    pub vertices: Vec<[f32; 3]>,
+    pub indices: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Light {
+    pub intensity: f32,
+    pub color: [f32; 3],
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Camera {
+    pub fov: f32,
+    pub aspect_ratio: f32,
+    pub near: f32,
+    pub far: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum SceneObject {
+    Mesh(Mesh),
+    Light(Light),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Scene {
+    pub camera: Camera,
+    pub lights: HashMap<String, Light>,
+    pub meshes: HashMap<String, Mesh>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SceneGraph {
+    pub root: Scene,
+}
+
+impl SceneGraph {
+    pub fn new() -> Self {
+        Self {
+            root: Scene {
+                camera: Camera {
+                    fov: 90.0,
+                    aspect_ratio: 16.0 / 9.0,
+                    near: 0.1,
+                    far: 100.0,
+                },
+                lights: HashMap::new(),
+                meshes: HashMap::new(),
+            },
+        }
+    }
+
+    pub fn add_scene_object(&mut self, name: &str, object: SceneObject) {
+        match object {
+            SceneObject::Mesh(mesh) => {
+                self.root.meshes.insert(name.to_string(), mesh);
+            }
+            SceneObject::Light(light) => {
+                self.root.lights.insert(name.to_string(), light);
+            }
+        }
+    }
+
+    pub fn remove_object(&mut self, name: &str) -> bool {
+        self.root.meshes.remove(name).is_some() || self.root.lights.remove(name).is_some()
+    }
+
+    pub fn find_object<'a>(&'a self, name: &str) -> Option<SceneObject> {
+        if let Some(mesh) = self.root.meshes.get(name) {
+            return Some(SceneObject::Mesh(mesh.clone()));
+        }
+        if let Some(light) = self.root.lights.get(name) {
+            return Some(SceneObject::Light(light.clone()));
+        }
+        None
+    }
+
+    pub fn serialize(&self) -> String {
+        serde_yml::to_string(self).unwrap()
+    }
+}
+
+impl std::fmt::Display for SceneGraph {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.serialize())
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn create_scene_graph() -> *mut SceneGraph {
+    Box::into_raw(Box::new(SceneGraph::new()))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn free_scene_graph(graph: *mut SceneGraph) {
+    if !graph.is_null() {
+        unsafe {
+            let _b = Box::from_raw(graph);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn add_scene_object(graph: *mut SceneGraph, name: *const u8, object: *const SceneObject) {
+    if graph.is_null() || name.is_null() || object.is_null() {
+        return;
+    }
+    let graph = unsafe { &mut *graph };
+    let name = unsafe { std::ffi::CStr::from_ptr(name as *const i8) }.to_str().unwrap();
+    let object = unsafe { &*object };
+    graph.add_scene_object(name, object.clone());
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn remove_scene_object(graph: *mut SceneGraph, name: *   const u8) -> bool {
+    if graph.is_null() || name.is_null() {
+        return false;
+    }
+    let graph = unsafe { &mut *graph };
+    let name = unsafe { std::ffi::CStr::from_ptr(name as *const i8) }.to_str().unwrap();
+    graph.remove_object(name)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn find_scene_object(graph: *const SceneGraph, name: *const u8) -> *const SceneObject {
+    if graph.is_null() || name.is_null() {
+        return std::ptr::null();
+    }
+    let graph = unsafe { &*graph };
+    let name = unsafe { std::ffi::CStr::from_ptr(name as *const i8) }.to_str().unwrap();
+    if let Some(object) = graph.find_object(name) {
+        Box::into_raw(Box::new(object))    
+    } else {
+        std::ptr::null()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scene_graph() {
+        let mut graph = SceneGraph::new();
+        graph.add_scene_object("Mesh1", SceneObject::Mesh(Mesh {
+            vertices: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            indices: vec![0, 1, 2],
+        }));
+        assert!(graph.find_object("Mesh1").is_some());
+        println!("{}", graph);
+        assert!(graph.remove_object("Mesh1"));
+        assert!(graph.find_object("Mesh1").is_none());
+    }
+}
