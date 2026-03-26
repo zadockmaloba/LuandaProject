@@ -1,1 +1,1 @@
-mod metal;
+pub mod metal;
