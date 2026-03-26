@@ -55,6 +55,18 @@ impl SceneGraph {
         }
     }
 
+    pub fn from_string(data: &str) -> Self {
+        serde_yml::from_str(data).unwrap()
+    }
+
+    pub fn set_camera(&mut self, camera: Camera) {
+        self.root.camera = camera;
+    }
+
+    pub fn get_camera(&self) -> &Camera {
+        &self.root.camera
+    }
+
     pub fn add_scene_object(&mut self, name: &str, object: SceneObject) {
         match object {
             SceneObject::Mesh(mesh) => {
@@ -155,5 +167,43 @@ mod tests {
         println!("{}", graph);
         assert!(graph.remove_object("Mesh1"));
         assert!(graph.find_object("Mesh1").is_none());
+    }
+
+    #[test]
+    fn test_serialization() {
+        let mut graph = SceneGraph::new();
+        graph.add_scene_object("Mesh1", SceneObject::Mesh(Mesh {
+            vertices: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            indices: vec![0, 1, 2],
+        }));
+        let serialized = graph.serialize();
+        let deserialized = SceneGraph::from_string(&serialized);
+        assert!(deserialized.find_object("Mesh1").is_some());
+    }
+
+    #[test]
+    fn test_deserialization() {
+        let data = r#"
+        root:
+            camera:
+                fov: 90.0
+                aspect_ratio: 1.7777777777777777
+                near: 0.1
+                far: 100.0
+            lights:
+                Light1:
+                    intensity: 1.0
+                    color: [1.0, 1.0, 1.0]
+            meshes:
+                Mesh1:
+                    vertices:
+                    - [0.0, 0.0, 0.0]
+                    - [1.0, 0.0, 0.0]
+                    - [0.0, 1.0, 0.0]
+                    indices: [0, 1, 2]
+            "#;
+        let graph = SceneGraph::from_string(data);
+        assert!(graph.find_object("Mesh1").is_some());
+        assert!(graph.find_object("Light1").is_some());
     }
 }
