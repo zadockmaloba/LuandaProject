@@ -14,12 +14,47 @@ struct InspectorView: View {
     }
 }
 
+struct AssetsView: View {
+    var body: some View {
+        List {
+            Section(header: Text("2D Meshes")) {
+                ForEach(["Line", "Square", "Circle"], id: \.self) { mesh in
+                    // add a thumbnail for the mesh
+                    Text(mesh)
+                }
+            }
+            Section(header: Text("3D Meshes")) {
+                ForEach(["Plane", "Cube", "Sphere"], id: \.self) { mesh in
+                    // add a thumbnail for the mesh
+                    Text(mesh)
+                }
+            }
+            Section(header: Text("Textures")) {
+                ForEach(["Texture1", "Texture2", "Texture3"], id: \.self) { texture in
+                    Text(texture)
+                }
+            }
+            Section(header: Text("Models")) {
+                ForEach(["Model1", "Model2", "Model3"], id: \.self) { model in
+                    Text(model)
+                }
+            }
+            Section(header: Text("Audio")) {
+                ForEach(["Audio1", "Audio2", "Audio3"], id: \.self) { audio in
+                    Text(audio)
+                }
+            }.navigationTitle("Assets")
+        }
+        .frame(minWidth: 300, minHeight: 400)
+    }
+}
+
 struct SideBarView: View {
     var body: some View {
         TabView {
-            Text("Hierarchy")
+            AssetsView()
                 .tabItem {
-                    Label("Hierarchy", systemImage: "list.bullet")
+                    Label("Assets", systemImage: "photo.on.rectangle")
                         .labelStyle(.titleAndIcon)
                 }
             Text("Scene")
@@ -27,9 +62,9 @@ struct SideBarView: View {
                     Label("Scene", systemImage: "cube")
                         .labelStyle(.titleAndIcon)
                 }
-            Text("Assets")
+            Text("Hierarchy")
                 .tabItem {
-                    Label("Assets", systemImage: "photo.on.rectangle")
+                    Label("Hierarchy", systemImage: "list.bullet")
                         .labelStyle(.titleAndIcon)
                 }
             Text("Inspector")
