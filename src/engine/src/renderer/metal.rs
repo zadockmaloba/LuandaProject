@@ -4,6 +4,7 @@ use objc2::runtime::ProtocolObject;
 use objc2_foundation::{ns_string, NSString};
 use objc2_metal::*;
 use std::ptr::NonNull;
+use crate::scenegraph::SceneGraph;
 
 pub struct MetalRenderer {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
