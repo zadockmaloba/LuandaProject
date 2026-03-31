@@ -5,7 +5,7 @@ if (WIN32)
   message(FATAL_ERROR "WIN32 editor not supported yet.")
 elseif(APPLE)
   set(PLATFORM_SPECIFIC_SRC osx_main.mm)
-  set(PLATFORM_SPECIFIC_LIBS 
+  set(PLATFORM_SPECIFIC_LIBS
     "$<LINK_LIBRARY:FRAMEWORK,Foundation>"
     "$<LINK_LIBRARY:FRAMEWORK,Cocoa>"
     "$<LINK_LIBRARY:FRAMEWORK,Metal>"
@@ -37,9 +37,9 @@ set_target_properties(LuandaEditor PROPERTIES
 )
 endif()
 
-target_link_libraries(LuandaEditor 
+target_link_libraries(LuandaEditor
 PRIVATE
-  ImGui 
+  ImGui
   LuandaEngine
   ${PLATFORM_SPECIFIC_LIBS}
 )
