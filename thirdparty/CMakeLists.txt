@@ -20,7 +20,7 @@ if (${LUANDA_FRONTEND_LIB} STREQUAL "ImGUI")
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_metal.h
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_osx.h
     )
-  elseif (UNIX AND NOT APPLE)
+  else()
     message(FATAL_ERROR "Platform not yet supported")
   endif()
   add_library(
