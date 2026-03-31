@@ -23,7 +23,7 @@ add_executable(LuandaEditor
 )
 
 if (APPLE)
-set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
 set(BUNDLE_IDENTIFIER "com.luandaproject.luanda-editor")
 set(BUNDLE_NAME "LuandaEditor")
 
