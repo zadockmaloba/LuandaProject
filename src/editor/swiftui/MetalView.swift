@@ -39,11 +39,44 @@ class MetalViewCoordinator: NSObject, MTKViewDelegate {
   // directly. Rather, we request for it to be called by calling the draw() method of
   // the wrapped MTKView.
   func draw(in view: MTKView) {
-    luanda_renderer_draw(
+    // Render to texture
+    luanda_renderer_render(
       self.rustRenderer,
-      view.currentRenderPassDescriptor,
-      view.currentDrawable
+      Int(view.drawableSize.width),
+      Int(view.drawableSize.height)
     )
+    
+    // Get the rendered texture
+    guard let renderTexture = luanda_renderer_get_texture(self.rustRenderer) else {
+      return
+    }
+    
+    // Copy the texture to the drawable
+    guard let commandBuffer = self.commandQueue.makeCommandBuffer(),
+          let descriptor = view.currentRenderPassDescriptor,
+          let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor),
+          let drawable = view.currentDrawable else {
+      return
+    }
+    
+    // Blit the texture to the drawable
+    let blitEncoder = commandBuffer.makeBlitCommandEncoder()
+    blitEncoder?.copy(
+      from: renderTexture,
+      sourceSlice: 0,
+      sourceLevel: 0,
+      sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+      sourceSize: MTLSize(width: renderTexture.width, height: renderTexture.height, depth: 1),
+      to: drawable.texture,
+      destinationSlice: 0,
+      destinationLevel: 0,
+      destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0)
+    )
+    blitEncoder?.endEncoding()
+    renderEncoder.endEncoding()
+    
+    commandBuffer.present(drawable)
+    commandBuffer.commit()
   }
 }
 

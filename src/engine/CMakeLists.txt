@@ -23,11 +23,11 @@ set(RUST_LIB_DIR "${RUST_TARGET_DIR}/${CARGO_BUILD_TYPE}")
 
 # Determine library name based on platform
 if(APPLE)
-    set(RUST_LIB_NAME "libLuandaEngine.a")
+    set(RUST_LIB_NAME "libluanda_engine.a")
 elseif(WIN32)
-    set(RUST_LIB_NAME "LuandaEngine.lib")
+    set(RUST_LIB_NAME "luanda_engine.lib")
 else()
-    set(RUST_LIB_NAME "libLuandaEngine.a")
+    set(RUST_LIB_NAME "libluanda_engine.a")
 endif()
 
 set(RUST_LIB_PATH "${RUST_LIB_DIR}/${RUST_LIB_NAME}")

@@ -4,26 +4,28 @@ use objc2::runtime::ProtocolObject;
 use objc2_foundation::{ns_string, NSString};
 use objc2_metal::*;
 use std::ptr::NonNull;
-use crate::scenegraph::SceneGraph;
 
 pub struct MetalRenderer {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     command_queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
     pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     vertex_buffer: Retained<ProtocolObject<dyn MTLBuffer>>,
+    render_texture: Option<Retained<ProtocolObject<dyn MTLTexture>>>,
+    texture_width: usize,
+    texture_height: usize,
 }
 
 impl MetalRenderer {
     pub fn new(device: Retained<ProtocolObject<dyn MTLDevice>>) -> Self {
         let command_queue = device.newCommandQueue()
             .expect("Failed to create command queue");
-        
+
         // Create shader library
         let library = Self::create_shader_library(&device);
-        
+
         // Create render pipeline
         let pipeline_state = Self::create_pipeline(&device, &library);
-        
+
         // Create vertex buffer (example: triangle)
         let vertices: [f32; 9] = [
             0.0, 0.5, 0.0,   // Top
@@ -41,22 +43,64 @@ impl MetalRenderer {
                 )
         }
         .expect("Failed to create vertex buffer");
-        
+
         Self {
             device,
             command_queue,
             pipeline_state,
             vertex_buffer,
+            render_texture: None,
+            texture_width: 0,
+            texture_height: 0,
         }
     }
-    
-    pub fn draw(&self, descriptor: &MTLRenderPassDescriptor, drawable: &ProtocolObject<dyn MTLDrawable>) {
+
+    fn ensure_texture(&mut self, width: usize, height: usize) {
+        if self.render_texture.is_none() || self.texture_width != width || self.texture_height != height {
+            let descriptor = unsafe {
+                MTLTextureDescriptor::texture2DDescriptorWithPixelFormat_width_height_mipmapped(
+                    MTLPixelFormat::BGRA8Unorm,
+                    width,
+                    height,
+                    false
+                )
+            };
+            descriptor.setUsage(MTLTextureUsage::RenderTarget | MTLTextureUsage::ShaderRead);
+            
+            self.render_texture = self.device.newTextureWithDescriptor(&descriptor);
+            self.texture_width = width;
+            self.texture_height = height;
+            println!("Created render texture: {}x{}", width, height);
+        }
+    }
+
+    pub fn render_to_texture(&mut self, width: usize, height: usize) {
+        // Ensure texture exists and is the right size
+        self.ensure_texture(width, height);
+        
+        let texture = self.render_texture.as_ref().expect("Render texture not created");
+        
+        // Create render pass descriptor for our texture
+        let render_pass_descriptor = MTLRenderPassDescriptor::new();
+        unsafe {
+            let color_attachment = render_pass_descriptor.colorAttachments().objectAtIndexedSubscript(0);
+            color_attachment.setTexture(Some(texture));
+            color_attachment.setLoadAction(MTLLoadAction::Clear);
+            color_attachment.setStoreAction(MTLStoreAction::Store);
+            color_attachment.setClearColor(MTLClearColor {
+                red: 0.1,
+                green: 0.1,
+                blue: 0.15,
+                alpha: 1.0,
+            });
+        }
+        
         let command_buffer = self.command_queue.commandBuffer()
             .expect("Failed to create command buffer");
-        
-        let encoder = command_buffer.renderCommandEncoderWithDescriptor(descriptor)
+
+        let encoder = command_buffer.renderCommandEncoderWithDescriptor(&render_pass_descriptor)
             .expect("Failed to create encoder");
-        
+
         encoder.setRenderPipelineState(&self.pipeline_state);
         unsafe {
             encoder.setVertexBuffer_offset_atIndex(Some(&*self.vertex_buffer), 0, 0);
@@ -69,25 +113,27 @@ impl MetalRenderer {
                 3
             );
         }
-        
-        encoder.endEncoding();
 
-        command_buffer.presentDrawable(drawable);
+        encoder.endEncoding();
         command_buffer.commit();
     }
     
+    pub fn get_texture(&self) -> Option<*mut ProtocolObject<dyn MTLTexture>> {
+        self.render_texture.as_ref().map(|t| Retained::as_ptr(t) as *mut _)
+    }
+
     fn create_shader_library(
         device: &ProtocolObject<dyn MTLDevice>,
     ) -> Retained<ProtocolObject<dyn MTLLibrary>> {
         let shader_source = r#"
             #include <metal_stdlib>
             using namespace metal;
-            
+
             struct VertexOut {
                 float4 position [[position]];
                 float4 color;
             };
-            
+
             vertex VertexOut vertex_main(uint vertexID [[vertex_id]],
                                          constant float3* vertices [[buffer(0)]]) {
                 VertexOut out;
@@ -101,7 +147,7 @@ impl MetalRenderer {
                 out.color = float4(colors[vertexID], 1.0);
                 return out;
             }
-            
+
             fragment float4 fragment_main(VertexOut in [[stage_in]]) {
                 return in.color;
             }
@@ -112,29 +158,29 @@ impl MetalRenderer {
             .newLibraryWithSource_options_error(&shader_source_ns, None)
             .expect("Failed to create shader library")
     }
-    
+
     fn create_pipeline(
         device: &ProtocolObject<dyn MTLDevice>,
         library: &ProtocolObject<dyn MTLLibrary>,
     ) -> Retained<ProtocolObject<dyn MTLRenderPipelineState>> {
         let descriptor = MTLRenderPipelineDescriptor::new();
-        
+
         let vertex_fn = library
             .newFunctionWithName(ns_string!("vertex_main"))
             .expect("Failed to find vertex function");
         let fragment_fn = library
             .newFunctionWithName(ns_string!("fragment_main"))
             .expect("Failed to find fragment function");
-        
+
         descriptor.setVertexFunction(Some(&vertex_fn));
         descriptor.setFragmentFunction(Some(&fragment_fn));
-        
+
         unsafe {
             let color_attachment = descriptor.colorAttachments()
                 .objectAtIndexedSubscript(0);
             color_attachment.setPixelFormat(MTLPixelFormat::BGRA8Unorm);
         }
-        
+
         device
             .newRenderPipelineStateWithDescriptor_error(&descriptor)
             .expect("Failed to create pipeline")
@@ -155,15 +201,21 @@ pub extern "C" fn luanda_renderer_create(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn luanda_renderer_draw(
+pub extern "C" fn luanda_renderer_render(
     renderer: *mut MetalRenderer,
-    descriptor: *const MTLRenderPassDescriptor,
-    drawable: *const ProtocolObject<dyn MTLDrawable>,
+    width: usize,
+    height: usize,
 ) {
+    let renderer = unsafe { &mut *renderer };
+    renderer.render_to_texture(width, height);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn luanda_renderer_get_texture(
+    renderer: *mut MetalRenderer,
+) -> *mut ProtocolObject<dyn MTLTexture> {
     let renderer = unsafe { &*renderer };
-    let descriptor = unsafe { &*descriptor };
-    let drawable = unsafe { &*drawable };
-    renderer.draw(descriptor, drawable);
+    renderer.get_texture().unwrap_or(std::ptr::null_mut())
 }
 
 #[unsafe(no_mangle)]

@@ -16,3 +16,4 @@ elseif(APPLE)
 endif()
 
 add_dependencies(LuandaEditor LuandaEngine ImGui)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/common/")

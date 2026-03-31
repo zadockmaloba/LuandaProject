@@ -23,7 +23,7 @@ add_executable(LuandaEditor
 )
 
 if (APPLE)
-set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 15.7)
 set(BUNDLE_IDENTIFIER "com.luandaproject.luanda-editor")
 set(BUNDLE_NAME "LuandaEditor")
 
@@ -36,6 +36,11 @@ set_target_properties(LuandaEditor PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/cmake/Info.plist.in"
 )
 endif()
+
+target_include_directories(LuandaEditor
+PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../common"
+)
 
 target_link_libraries(LuandaEditor
 PRIVATE
