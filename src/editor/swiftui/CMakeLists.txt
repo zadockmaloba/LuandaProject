@@ -57,5 +57,3 @@ target_compile_options(LuandaEditor PRIVATE
 # Link the static library
 target_link_libraries(LuandaEditor LuandaEngine
 )
-
-add_dependencies(LuandaEditor LuandaEngine)
