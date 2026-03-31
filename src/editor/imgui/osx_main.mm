@@ -32,6 +32,7 @@
 @property (nonatomic, readonly) MTKView *mtkView;
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
+@property (nonatomic) ImGuiContext *context;
 @end
 
 //-----------------------------------------------------------------------------------
@@ -54,9 +55,8 @@
     }
 
     // Setup Dear ImGui context
-    // FIXME: This example doesn't have proper cleanup...
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    self.context = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -87,6 +87,21 @@
     //IM_ASSERT(font != nullptr);
 
     return self;
+}
+
+-(void)dealloc
+{
+    [super dealloc];
+    ImGui_ImplMetal_Shutdown();
+#if TARGET_OS_OSX
+    ImGui_ImplOSX_Shutdown();
+#endif
+    if (self.context)
+    {
+        NSLog(@"Cleaning up Dear ImGui context.");
+        ImGui::DestroyContext(self.context);
+        self.context = nullptr;
+    }
 }
 
 -(MTKView *)mtkView
