@@ -10,6 +10,7 @@
 
 #if TARGET_OS_OSX
 #import <Cocoa/Cocoa.h>
+#import <AppKit/AppKit.h>
 #else
 #import <UIKit/UIKit.h>
 #endif
@@ -156,7 +157,10 @@
     luanda_renderer_render(self.rustRenderer, (size_t)view.bounds.size.width, (size_t)view.bounds.size.height);
     id<MTLTexture> gameTexture = luanda_renderer_get_texture(self.rustRenderer);
 
+    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+
     // 1. Show the game viewport window with the rendered texture
+    ImGui::SetNextWindowSize({400,400});
     ImGui::Begin("Game Viewport");
     if (gameTexture != nil) {
         ImVec2 viewportSize = ImGui::GetContentRegionAvail();
@@ -165,9 +169,9 @@
     }
     ImGui::End();
 
-    // 2. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-    if (show_demo_window)
-        ImGui::ShowDemoWindow(&show_demo_window);
+    ImGui::SetNextWindowSize({400, ImGui::GetWindowHeight()});
+    ImGui::Begin("Scene");
+    ImGui::End();
 
     // Rendering
     ImGui::Render();
@@ -260,6 +264,36 @@
 @end
 
 @implementation AppDelegate
+
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    NSLog(@"Application finished launching");
+    
+    // Create the menu bar
+    NSMenu *menuBar = [[NSMenu alloc] init];
+    
+    // Create the Application menu (first menu with app name)
+    NSMenuItem *appMenuItem = [[NSMenuItem alloc] init];
+    NSMenu *appMenu = [[NSMenu alloc] init];
+    [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenuItem setSubmenu:appMenu];
+    [menuBar addItem:appMenuItem];
+    
+    // Create File menu
+    NSMenuItem *fileMenuItem = [[NSMenuItem alloc] init];
+    NSMenu *fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
+    [fileMenu addItemWithTitle:@"Open Project" action:@selector(performCustomAction) keyEquivalent:@"O"];
+    [fileMenu addItemWithTitle:@"New Project" action:@selector(performCustomAction) keyEquivalent:@"N"];
+    [fileMenuItem setSubmenu:fileMenu];
+    [menuBar addItem:fileMenuItem];
+    
+    // Set the menu bar
+    [NSApp setMainMenu:menuBar];
+}
+
+- (void)performCustomAction {
+    NSLog(@"Custom menu action performed!");
+    // Implement your custom logic here
+}
 
 -(BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
 {
