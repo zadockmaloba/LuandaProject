@@ -259,7 +259,7 @@
 
 #if TARGET_OS_OSX
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSToolbarDelegate>
 @property (nonatomic, strong) NSWindow *window;
 @end
 
@@ -295,6 +295,106 @@
     // Implement your custom logic here
 }
 
+#pragma mark - Toolbar Delegate
+
+// Toolbar item identifiers
+static NSString *const PlayToolbarItemID = @"PlayItem";
+static NSString *const StopToolbarItemID = @"StopItem";
+static NSString *const BuildToolbarItemID = @"BuildItem";
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
+    return @[PlayToolbarItemID, 
+             StopToolbarItemID, 
+             BuildToolbarItemID,
+             NSToolbarFlexibleSpaceItemIdentifier, 
+             NSToolbarSpaceItemIdentifier];
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
+    return @[PlayToolbarItemID, 
+             StopToolbarItemID,
+             NSToolbarFlexibleSpaceItemIdentifier,
+             BuildToolbarItemID];
+}
+
+- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar 
+     itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier 
+ willBeInsertedIntoToolbar:(BOOL)flag {
+    
+    if ([itemIdentifier isEqualToString:PlayToolbarItemID]) {
+        NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Play";
+        item.paletteLabel = @"Play";
+        item.toolTip = @"Run the game";
+        
+        if (@available(macOS 11.0, *)) {
+            item.image = [NSImage imageWithSystemSymbolName:@"play" 
+                                   accessibilityDescription:@"Play"];
+        } else {
+            item.image = [NSImage imageNamed:NSImageNameQuickLookTemplate];
+        }
+        
+        item.target = self;
+        item.action = @selector(playAction:);
+        return item;
+    }
+    
+    if ([itemIdentifier isEqualToString:StopToolbarItemID]) {
+        NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Stop";
+        item.paletteLabel = @"Stop";
+        item.toolTip = @"Stop the game";
+        
+        if (@available(macOS 11.0, *)) {
+            item.image = [NSImage imageWithSystemSymbolName:@"stop" 
+                                   accessibilityDescription:@"Stop"];
+        } else {
+            item.image = [NSImage imageNamed:NSImageNameStopProgressTemplate];
+        }
+        
+        item.target = self;
+        item.action = @selector(stopAction:);
+        return item;
+    }
+    
+    if ([itemIdentifier isEqualToString:BuildToolbarItemID]) {
+        NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Build";
+        item.paletteLabel = @"Build";
+        item.toolTip = @"Build the project";
+        
+        if (@available(macOS 11.0, *)) {
+            item.image = [NSImage imageWithSystemSymbolName:@"hammer" 
+                                   accessibilityDescription:@"Build"];
+        } else {
+            item.image = [NSImage imageNamed:NSImageNameActionTemplate];
+        }
+        
+        item.target = self;
+        item.action = @selector(buildAction:);
+        return item;
+    }
+    
+    return nil;
+}
+
+#pragma mark - Toolbar Actions
+
+- (void)playAction:(id)sender {
+    NSLog(@"Play button clicked - starting game");
+    // TODO: Implement game play logic
+}
+
+- (void)stopAction:(id)sender {
+    NSLog(@"Stop button clicked - stopping game");
+    // TODO: Implement game stop logic
+}
+
+- (void)buildAction:(id)sender {
+    NSLog(@"Build button clicked - building project");
+    // TODO: Implement build logic
+}
+
 -(BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
 {
     return YES;
@@ -309,6 +409,20 @@
                                                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
+        
+        // Create and configure toolbar
+        NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
+        toolbar.delegate = self;
+        toolbar.displayMode = NSToolbarDisplayModeIconAndLabel;
+        toolbar.allowsUserCustomization = YES;
+        toolbar.autosavesConfiguration = YES;
+        
+        // Use unified toolbar style (macOS 11+)
+        if (@available(macOS 11.0, *)) {
+            self.window.toolbarStyle = NSWindowToolbarStyleUnified;
+        }
+        
+        self.window.toolbar = toolbar;
         self.window.contentViewController = rootViewController;
         [self.window center];
         [self.window makeKeyAndOrderFront:self];
