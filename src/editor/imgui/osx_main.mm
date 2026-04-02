@@ -267,17 +267,17 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     NSLog(@"Application finished launching");
-    
+
     // Create the menu bar
     NSMenu *menuBar = [[NSMenu alloc] init];
-    
+
     // Create the Application menu (first menu with app name)
     NSMenuItem *appMenuItem = [[NSMenuItem alloc] init];
     NSMenu *appMenu = [[NSMenu alloc] init];
     [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
     [appMenuItem setSubmenu:appMenu];
     [menuBar addItem:appMenuItem];
-    
+
     // Create File menu
     NSMenuItem *fileMenuItem = [[NSMenuItem alloc] init];
     NSMenu *fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
@@ -285,7 +285,7 @@
     [fileMenu addItemWithTitle:@"New Project" action:@selector(performCustomAction) keyEquivalent:@"N"];
     [fileMenuItem setSubmenu:fileMenu];
     [menuBar addItem:fileMenuItem];
-    
+
     // Set the menu bar
     [NSApp setMainMenu:menuBar];
 }
@@ -303,78 +303,78 @@ static NSString *const StopToolbarItemID = @"StopItem";
 static NSString *const BuildToolbarItemID = @"BuildItem";
 
 - (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
-    return @[PlayToolbarItemID, 
-             StopToolbarItemID, 
+    return @[PlayToolbarItemID,
+             StopToolbarItemID,
              BuildToolbarItemID,
-             NSToolbarFlexibleSpaceItemIdentifier, 
+             NSToolbarFlexibleSpaceItemIdentifier,
              NSToolbarSpaceItemIdentifier];
 }
 
 - (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
-    return @[PlayToolbarItemID, 
+    return @[PlayToolbarItemID,
              StopToolbarItemID,
              NSToolbarFlexibleSpaceItemIdentifier,
              BuildToolbarItemID];
 }
 
-- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar 
-     itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier 
+- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar
+     itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier
  willBeInsertedIntoToolbar:(BOOL)flag {
-    
+
     if ([itemIdentifier isEqualToString:PlayToolbarItemID]) {
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
         item.label = @"Play";
         item.paletteLabel = @"Play";
         item.toolTip = @"Run the game";
-        
+
         if (@available(macOS 11.0, *)) {
-            item.image = [NSImage imageWithSystemSymbolName:@"play" 
+            item.image = [NSImage imageWithSystemSymbolName:@"play"
                                    accessibilityDescription:@"Play"];
         } else {
             item.image = [NSImage imageNamed:NSImageNameQuickLookTemplate];
         }
-        
+
         item.target = self;
         item.action = @selector(playAction:);
         return item;
     }
-    
+
     if ([itemIdentifier isEqualToString:StopToolbarItemID]) {
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
         item.label = @"Stop";
         item.paletteLabel = @"Stop";
         item.toolTip = @"Stop the game";
-        
+
         if (@available(macOS 11.0, *)) {
-            item.image = [NSImage imageWithSystemSymbolName:@"stop" 
+            item.image = [NSImage imageWithSystemSymbolName:@"stop"
                                    accessibilityDescription:@"Stop"];
         } else {
             item.image = [NSImage imageNamed:NSImageNameStopProgressTemplate];
         }
-        
+
         item.target = self;
         item.action = @selector(stopAction:);
         return item;
     }
-    
+
     if ([itemIdentifier isEqualToString:BuildToolbarItemID]) {
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
         item.label = @"Build";
         item.paletteLabel = @"Build";
         item.toolTip = @"Build the project";
-        
+
         if (@available(macOS 11.0, *)) {
-            item.image = [NSImage imageWithSystemSymbolName:@"hammer" 
+            item.image = [NSImage imageWithSystemSymbolName:@"hammer"
                                    accessibilityDescription:@"Build"];
         } else {
             item.image = [NSImage imageNamed:NSImageNameActionTemplate];
         }
-        
+
         item.target = self;
         item.action = @selector(buildAction:);
         return item;
     }
-    
+
     return nil;
 }
 
@@ -409,19 +409,19 @@ static NSString *const BuildToolbarItemID = @"BuildItem";
                                                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
-        
+
         // Create and configure toolbar
         NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
         toolbar.delegate = self;
         toolbar.displayMode = NSToolbarDisplayModeIconAndLabel;
         toolbar.allowsUserCustomization = YES;
         toolbar.autosavesConfiguration = YES;
-        
+
         // Use unified toolbar style (macOS 11+)
         if (@available(macOS 11.0, *)) {
             self.window.toolbarStyle = NSWindowToolbarStyleUnified;
         }
-        
+
         self.window.toolbar = toolbar;
         self.window.contentViewController = rootViewController;
         [self.window center];
