@@ -1,3 +1,3 @@
 module LuandaBridge {
-    header "../../common/luandabridge.h"
+    header "luandabridge.h"
 }
