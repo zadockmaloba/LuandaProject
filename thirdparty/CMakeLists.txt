@@ -23,6 +23,7 @@ if (${LUANDA_FRONTEND_LIB} STREQUAL "ImGUI")
   else()
     message(FATAL_ERROR "Platform not yet supported")
   endif()
+
   add_library(
     ImGui STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
@@ -36,5 +37,18 @@ if (${LUANDA_FRONTEND_LIB} STREQUAL "ImGUI")
     PUBLIC
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/
+  )
+
+  add_library(
+    ImGuiTextEditor STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiColorTextEdit/TextEditor.cpp
+  )
+  target_include_directories(ImGuiTextEditor
+    PUBLIC
+      ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiColorTextEdit/
+  )
+  target_link_libraries(ImGuiTextEditor
+    PRIVATE
+      ImGui
   )
 endif()

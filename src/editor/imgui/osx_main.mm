@@ -20,6 +20,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_metal.h"
+#include "TextEditor.h"
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
 @interface AppViewController : NSViewController<NSWindowDelegate>
@@ -37,6 +38,7 @@
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
 @property (nonatomic) ImGuiContext *context;
 @property (nonatomic) void* rustRenderer;
+@property (nonatomic) TextEditor editor;
 @end
 
 //-----------------------------------------------------------------------------------
@@ -167,6 +169,10 @@
         // Display the texture in the ImGui window
         ImGui::Image((ImTextureID)gameTexture, viewportSize);
     }
+    ImGui::End();
+
+    ImGui::Begin("TextEditor");
+    self.editor.Render("TextEditor");
     ImGui::End();
 
     ImGui::SetNextWindowSize({400, ImGui::GetWindowHeight()});

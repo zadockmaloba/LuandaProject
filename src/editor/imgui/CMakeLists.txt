@@ -46,6 +46,7 @@ PRIVATE
 target_link_libraries(LuandaEditor
 PRIVATE
   ImGui
+  ImGuiTextEditor
   LuandaEngine
   ${PLATFORM_SPECIFIC_LIBS}
 )
