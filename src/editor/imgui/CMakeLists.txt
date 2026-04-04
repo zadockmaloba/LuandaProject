@@ -21,6 +21,7 @@ endif()
 add_executable(LuandaEditor
   MACOSX_BUNDLE WIN32
   ${PLATFORM_SPECIFIC_SRC}
+  viewportwidget.hpp viewportwidget.cpp
 )
 
 if (APPLE)
@@ -37,11 +38,6 @@ set_target_properties(LuandaEditor PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/cmake/Info.plist.in"
 )
 endif()
-
-target_include_directories(LuandaEditor
-PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/../common"
-)
 
 target_link_libraries(LuandaEditor
 PRIVATE

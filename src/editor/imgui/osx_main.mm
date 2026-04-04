@@ -30,17 +30,15 @@
 @end
 #endif
 
-#include <luandabridge.h>
-#include <scenegraph.h>
+#include <Metal/Metal.hpp>
+#include "viewportwidget.hpp"
 
 @interface AppViewController () <MTKViewDelegate>
 @property (nonatomic, readonly) MTKView *mtkView;
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
 @property (nonatomic) ImGuiContext *context;
-@property (nonatomic) void* rustRenderer;
-@property (nonatomic) TextEditor editor;
-@property (nonatomic) SceneGraph* sceneGraph;
+@property (nonatomic) LuandaEditor::ViewPortWidget *viewPortWidget;
 @end
 
 //-----------------------------------------------------------------------------------
@@ -56,8 +54,7 @@
     _device = MTLCreateSystemDefaultDevice();
     _commandQueue = [_device newCommandQueue];
 
-    _rustRenderer = luanda_renderer_create(_device);
-    _sceneGraph = create_scene_graph();
+    _viewPortWidget = new LuandaEditor::ViewPortWidget((__bridge MTL::Device*)_device);
 
     if (!self.device)
     {
@@ -86,8 +83,7 @@
 
 -(void)dealloc
 {
-    luanda_renderer_destroy(_rustRenderer);
-    free_scene_graph(_sceneGraph);
+    delete _viewPortWidget;
 
     [super dealloc];
     ImGui_ImplMetal_Shutdown();
@@ -159,24 +155,15 @@
     static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // Render game to texture
-    luanda_renderer_render(self.rustRenderer, (size_t)view.bounds.size.width, (size_t)view.bounds.size.height);
-    id<MTLTexture> gameTexture = luanda_renderer_get_texture(self.rustRenderer);
-
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
     // 1. Show the game viewport window with the rendered texture
     ImGui::SetNextWindowSize({400,400});
-    ImGui::Begin("Game Viewport");
-    if (gameTexture != nil) {
-        ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-        // Display the texture in the ImGui window
-        ImGui::Image((ImTextureID)gameTexture, viewportSize);
-    }
-    ImGui::End();
+    
+    _viewPortWidget->show(400, 400);
 
     ImGui::Begin("TextEditor");
-    self.editor.Render("TextEditor");
+    //self.editor.Render("TextEditor");
     ImGui::End();
 
     ImGui::SetNextWindowSize({400, ImGui::GetWindowHeight()});
