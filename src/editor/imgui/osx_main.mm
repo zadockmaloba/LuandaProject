@@ -31,6 +31,7 @@
 #endif
 
 #include <luandabridge.h>
+#include <scenegraph.h>
 
 @interface AppViewController () <MTKViewDelegate>
 @property (nonatomic, readonly) MTKView *mtkView;
@@ -39,6 +40,7 @@
 @property (nonatomic) ImGuiContext *context;
 @property (nonatomic) void* rustRenderer;
 @property (nonatomic) TextEditor editor;
+@property (nonatomic) SceneGraph* sceneGraph;
 @end
 
 //-----------------------------------------------------------------------------------
@@ -55,6 +57,7 @@
     _commandQueue = [_device newCommandQueue];
 
     _rustRenderer = luanda_renderer_create(_device);
+    _sceneGraph = create_scene_graph();
 
     if (!self.device)
     {
@@ -83,7 +86,8 @@
 
 -(void)dealloc
 {
-    luanda_renderer_destroy(self.rustRenderer);
+    luanda_renderer_destroy(_rustRenderer);
+    free_scene_graph(_sceneGraph);
 
     [super dealloc];
     ImGui_ImplMetal_Shutdown();

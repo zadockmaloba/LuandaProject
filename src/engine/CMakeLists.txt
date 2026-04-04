@@ -54,6 +54,9 @@ add_library(LuandaEngine STATIC IMPORTED GLOBAL)
 set_target_properties(LuandaEngine PROPERTIES
     IMPORTED_LOCATION ${RUST_LIB_PATH}
 )
+target_include_directories(LuandaEngine
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Add dependency to ensure Rust library is built
 add_dependencies(LuandaEngine LuandaEngine_build)

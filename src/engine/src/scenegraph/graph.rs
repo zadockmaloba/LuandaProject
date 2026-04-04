@@ -1,18 +1,21 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, ptr::null};
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Mesh {
     pub vertices: Vec<[f32; 3]>,
     pub indices: Vec<u32>,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Light {
     pub intensity: f32,
     pub color: [f32; 3],
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Camera {
     pub fov: f32,
@@ -21,12 +24,14 @@ pub struct Camera {
     pub far: f32,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Clone)]
 pub enum SceneObject {
     Mesh(Mesh),
     Light(Light),
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Scene {
     pub camera: Camera,
@@ -34,6 +39,7 @@ pub struct Scene {
     pub meshes: HashMap<String, Mesh>,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize)]
 pub struct SceneGraph {
     pub root: Scene,
@@ -146,9 +152,59 @@ pub extern "C" fn find_scene_object(graph: *const SceneGraph, name: *const u8) -
     let graph = unsafe { &*graph };
     let name = unsafe { std::ffi::CStr::from_ptr(name as *const i8) }.to_str().unwrap();
     if let Some(object) = graph.find_object(name) {
-        Box::into_raw(Box::new(object))    
+        Box::into_raw(Box::new(object))
     } else {
         std::ptr::null()
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn scene_graph_from_str(data: *const u8) -> *const SceneGraph {
+    if data.is_null() { return std::ptr::null(); }
+
+    let data_str = unsafe{ std::ffi::CStr::from_ptr(data as *const i8) }.to_str().unwrap();
+
+    let graph = SceneGraph::from_string(data_str);
+
+    Box::into_raw(Box::new(graph))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn set_scene_camera(graph: *mut SceneGraph, camera: *const Camera) {
+    if graph.is_null() || camera.is_null() {
+        return;
+    }
+    let graph = unsafe { &mut *graph };
+    let camera = unsafe { &*camera };
+    graph.set_camera(camera.clone());
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn get_scene_camera(graph: *const SceneGraph) -> *const Camera {
+    if graph.is_null() {
+        return std::ptr::null();
+    }
+    let graph = unsafe { &*graph };
+    graph.get_camera() as *const Camera
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn serialize_scene_graph(graph: *const SceneGraph) -> *const u8 {
+    if graph.is_null() {
+        return std::ptr::null();
+    }
+    let graph = unsafe { &*graph };
+    let serialized = graph.serialize();
+    let c_string = std::ffi::CString::new(serialized).unwrap();
+    c_string.into_raw() as *const u8
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn free_serialized_string(s: *mut u8) {
+    if !s.is_null() {
+        unsafe {
+            let _c_string = std::ffi::CString::from_raw(s as *mut i8);
+        }
     }
 }
 
