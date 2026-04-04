@@ -55,7 +55,9 @@ set_target_properties(LuandaEngine PROPERTIES
     IMPORTED_LOCATION ${RUST_LIB_PATH}
 )
 target_include_directories(LuandaEngine
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    INTERFACE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/metal-cpp
 )
 
 # Add dependency to ensure Rust library is built
