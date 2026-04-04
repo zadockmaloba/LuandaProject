@@ -9,7 +9,7 @@ class ViewPortWidget {
     ViewPortWidgetPrivate *_p = nullptr;
 
 public:
-    ViewPortWidget(MTL::Device *);
+    ViewPortWidget(const char *, MTL::Device *);
     ViewPortWidget(ViewPortWidget &&) = delete;
     ViewPortWidget(const ViewPortWidget &) = delete;
     ~ViewPortWidget();
