@@ -21,6 +21,7 @@ endif()
 add_executable(LuandaEditor
   MACOSX_BUNDLE WIN32
   ${PLATFORM_SPECIFIC_SRC}
+  viewcontroller.hpp viewcontroller.cpp
   viewportwidget.hpp viewportwidget.cpp
 )
 

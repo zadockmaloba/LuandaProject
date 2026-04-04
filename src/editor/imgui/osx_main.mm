@@ -31,14 +31,14 @@
 #endif
 
 #include <Metal/Metal.hpp>
-#include "viewportwidget.hpp"
+#include "viewcontroller.hpp"
 
 @interface AppViewController () <MTKViewDelegate>
 @property (nonatomic, readonly) MTKView *mtkView;
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
 @property (nonatomic) ImGuiContext *context;
-@property (nonatomic) LuandaEditor::ViewPortWidget *viewPortWidget;
+@property (nonatomic) LuandaEditor::ViewController *viewController;
 @end
 
 //-----------------------------------------------------------------------------------
@@ -54,7 +54,7 @@
     _device = MTLCreateSystemDefaultDevice();
     _commandQueue = [_device newCommandQueue];
 
-    _viewPortWidget = new LuandaEditor::ViewPortWidget((__bridge MTL::Device*)_device);
+    _viewController = new LuandaEditor::ViewController((__bridge MTL::Device*)_device);
 
     if (!self.device)
     {
@@ -83,7 +83,7 @@
 
 -(void)dealloc
 {
-    delete _viewPortWidget;
+    delete _viewController;
 
     [super dealloc];
     ImGui_ImplMetal_Shutdown();
@@ -150,25 +150,9 @@
 #endif
     ImGui::NewFrame();
 
-    // Our state (make them static = more or less global) as a convenience to keep the example terse.
-    static bool show_demo_window = true;
-    static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-
-    // 1. Show the game viewport window with the rendered texture
-    ImGui::SetNextWindowSize({400,400});
-    
-    _viewPortWidget->show(400, 400);
-
-    ImGui::Begin("TextEditor");
-    //self.editor.Render("TextEditor");
-    ImGui::End();
-
-    ImGui::SetNextWindowSize({400, ImGui::GetWindowHeight()});
-    ImGui::Begin("Scene");
-    ImGui::End();
+    _viewController->show();
 
     // Rendering
     ImGui::Render();
