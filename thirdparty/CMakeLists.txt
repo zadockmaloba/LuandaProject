@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
-project(ThirdPartyLibs LANGUAGES CXX OBJC OBJCXX)
+
+if (__APPLE__)
+set(ADDITIONAL_TARGET_LANGUAGES OBJC OBJCXX)
+endif()
+
+project(ThirdPartyLibs LANGUAGES CXX ${ADDITIONAL_TARGET_LANGUAGES})
 
 if (${LUANDA_FRONTEND_LIB} STREQUAL "ImGUI")
   if (WIN32)

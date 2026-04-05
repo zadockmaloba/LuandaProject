@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.19)
-project(LuandaEditorImGui LANGUAGES CXX OBJC OBJCXX)
+
+if (__APPLE__)
+set(ADDITIONAL_TARGET_LANGUAGES OBJC OBJCXX)
+endif()
+
+project(LuandaEditorImGui LANGUAGES CXX ${ADDITIONAL_TARGET_LANGUAGES})
 
 if (WIN32)
-  message(FATAL_ERROR "WIN32 editor not supported yet.")
+  set(PLATFORM_SPECIFIC_SRC win32_main.cpp)
 elseif(APPLE)
   set(PLATFORM_SPECIFIC_SRC osx_main.mm)
   set(PLATFORM_SPECIFIC_LIBS

@@ -6,6 +6,8 @@
 
 #if defined(__APPLE__)
 #include <Metal/Metal.hpp>
+#elif defined(WIN32)
+#include <d3d12.h>
 #else
 #error "Unsupported platform"
 #endif
