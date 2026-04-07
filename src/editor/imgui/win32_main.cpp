@@ -12,6 +12,7 @@
 #include <d3d12.h>
 #include <dxgi1_5.h>
 #include <tchar.h>
+#include "imgui_dx12_texture_bridge.hpp"
 #include "viewcontroller.hpp"
 
 #ifdef _DEBUG
@@ -98,6 +99,41 @@ static bool                         g_SwapChainOccluded = false;
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
+
+bool luanda_imgui_dx12_alloc_srv(
+    ID3D12Resource* resource,
+    D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu,
+    D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
+{
+    if (resource == nullptr || out_cpu == nullptr || out_gpu == nullptr)
+        return false;
+    if (g_pd3dDevice == nullptr || g_pd3dSrvDescHeap == nullptr)
+        return false;
+
+    g_pd3dSrvDescHeapAlloc.Alloc(out_cpu, out_gpu);
+
+    D3D12_RESOURCE_DESC resource_desc = resource->GetDesc();
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+    srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Format = resource_desc.Format;
+    srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srv_desc.Texture2D.MostDetailedMip = 0;
+    srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
+    srv_desc.Texture2D.PlaneSlice = 0;
+    srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+    g_pd3dDevice->CreateShaderResourceView(resource, &srv_desc, *out_cpu);
+    return true;
+}
+
+void luanda_imgui_dx12_free_srv(
+    D3D12_CPU_DESCRIPTOR_HANDLE cpu,
+    D3D12_GPU_DESCRIPTOR_HANDLE gpu)
+{
+    if (g_pd3dSrvDescHeap == nullptr)
+        return;
+    g_pd3dSrvDescHeapAlloc.Free(cpu, gpu);
+}
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);

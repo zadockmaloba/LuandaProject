@@ -1,8 +1,8 @@
 use std::ffi::c_void;
-use windows::Win32::Foundation::RECT;
-use windows::Win32::Graphics::Direct3D;
-use windows::Win32::Graphics::{Direct3D::Dxc::*, Direct3D::*, Direct3D12::*, Dxgi::Common::*};
-use windows::core::{Interface, GUID, HRESULT, PCSTR, PCWSTR, PWSTR};
+use windows::Win32::Foundation::{CloseHandle, HANDLE, RECT};
+use windows::Win32::Graphics::{Direct3D12::*, Dxgi::Common::*};
+use windows::Win32::System::Threading::{CreateEventW, WaitForSingleObject};
+use windows::core::Interface;
 
 use crate::renderer::{
     LuandaBackend, LuandaExternalDevice, LuandaTextureHandle, Renderer, TextureHandle,
@@ -13,12 +13,14 @@ pub struct D3D12Renderer {
     command_queue: ID3D12CommandQueue,
     command_allocator: ID3D12CommandAllocator,
     command_list: ID3D12GraphicsCommandList,
+    fence: ID3D12Fence,
+    fence_value: u64,
+    fence_event: HANDLE,
     rtv_heap: ID3D12DescriptorHeap,
-    pipeline_state: ID3D12PipelineState,
-    vertex_buffer: ID3D12Resource,
     render_texture: Option<ID3D12Resource>,
     texture_width: usize,
     texture_height: usize,
+    texture_state: D3D12_RESOURCE_STATES,
 }
 
 impl D3D12Renderer {
@@ -47,14 +49,12 @@ impl D3D12Renderer {
         }
         .expect("Failed to create RTV descriptor heap");
 
-        let pipeline_state = Self::create_pipeline(&device);
-
         let command_list: ID3D12GraphicsCommandList = unsafe {
             device.CreateCommandList(
                 0,
                 D3D12_COMMAND_LIST_TYPE_DIRECT,
                 &command_allocator,
-                Some(&pipeline_state),
+                None,
             )
         }
         .expect("Failed to create command list");
@@ -62,70 +62,37 @@ impl D3D12Renderer {
             command_list.Close().expect("Failed to close command list");
         }
 
-        // Create vertex buffer (triangle vertices)
-        let vertices: [f32; 9] = [
-            0.0, 0.5, 0.0, // Top
-            -0.5, -0.5, 0.0, // Bottom left
-            0.5, -0.5, 0.0, // Bottom right
-        ];
-        let mut vertex_buffer: Option<ID3D12Resource> = None;
-        unsafe {
-            device.CreateCommittedResource(
-                &D3D12_HEAP_PROPERTIES {
-                    Type: D3D12_HEAP_TYPE_UPLOAD,
-                    CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-                    MemoryPoolPreference: D3D12_MEMORY_POOL_UNKNOWN,
-                    CreationNodeMask: 0,
-                    VisibleNodeMask: 0,
-                },
-                D3D12_HEAP_FLAG_NONE,
-                &D3D12_RESOURCE_DESC {
-                    Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
-                    Alignment: 0,
-                    Width: (vertices.len() * std::mem::size_of::<f32>()) as u64,
-                    Height: 1,
-                    DepthOrArraySize: 1,
-                    MipLevels: 1,
-                    Format: DXGI_FORMAT_UNKNOWN,
-                    SampleDesc: DXGI_SAMPLE_DESC {
-                        Count: 1,
-                        Quality: 0,
-                    },
-                    Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-                    Flags: D3D12_RESOURCE_FLAG_NONE,
-                },
-                D3D12_RESOURCE_STATE_GENERIC_READ,
-                None,
-                &mut vertex_buffer,
-            )
-        }
-        .expect("Failed to create vertex buffer");
-        // Copy vertex data to buffer
-        let mut vertex_data_ptr: *mut f32 = std::ptr::null_mut();
-        unsafe {
-            vertex_buffer
-                .as_ref()
-                .unwrap()
-                .Map(0, None, Some(&mut vertex_data_ptr as *mut _ as *mut _))
-                .expect("Failed to map vertex buffer");
-        };
-        unsafe {
-            std::ptr::copy_nonoverlapping(vertices.as_ptr(), vertex_data_ptr, vertices.len());
-            vertex_buffer.as_ref().unwrap().Unmap(0, None);
-        }
+        let fence =
+            unsafe { device.CreateFence(0, D3D12_FENCE_FLAG_NONE) }.expect("Failed to create fence");
+
+        let fence_event = unsafe { CreateEventW(None, false, false, None) }
+            .expect("Failed to create fence event");
 
         Self {
             device,
             command_queue,
             command_allocator,
             command_list,
+            fence,
+            fence_value: 0,
+            fence_event,
             rtv_heap,
-            pipeline_state,
-            vertex_buffer: vertex_buffer.as_ref().unwrap().clone(),
             render_texture: None,
             texture_width: 0,
             texture_height: 0,
+            texture_state: D3D12_RESOURCE_STATE_RENDER_TARGET,
         }
+    }
+
+    fn wait_for_previous_submission(&self) -> anyhow::Result<()> {
+        if unsafe { self.fence.GetCompletedValue() } < self.fence_value {
+            unsafe {
+                self.fence
+                    .SetEventOnCompletion(self.fence_value, self.fence_event)?;
+                WaitForSingleObject(self.fence_event, u32::MAX);
+            }
+        }
+        Ok(())
     }
 
     //fn create_shader_library(device: &ID3D12Device) -> ID3D12PipelineLibrary {}
@@ -190,102 +157,11 @@ impl D3D12Renderer {
         self.render_texture = texture;
         self.texture_width = width;
         self.texture_height = height;
+        self.texture_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
         Ok(())
     }
 
-    fn create_shader_library(vs: &str, ps: Option<&str>) -> anyhow::Result<(Option<ID3DBlob>, Option<ID3DBlob>)> {
-        let compiler: IDxcCompiler3 = unsafe { DxcCreateInstance(&CLSID_DxcCompiler).unwrap() };
-        
-        let vs_wide: Vec<u16> = vs.encode_utf16().chain(Some(0)).collect();
-        let vs_blob= unsafe {
-            compiler.Compile(
-                &DxcBuffer {
-                    Ptr: vs_wide.as_ptr() as *const _,
-                    Size: vs_wide.len() * 2,
-                    Encoding: 0,
-                },
-                Some(&[
-                    PCWSTR::from_raw(b"-E\0".as_ptr() as *const u16),
-                    PCWSTR::from_raw(b"VSMain\0".as_ptr() as *const u16),
-                    PCWSTR::from_raw(b"-T\0".as_ptr() as *const u16),
-                    PCWSTR::from_raw(b"vs_6_0\0".as_ptr() as *const u16),
-                ]),
-                None,
-            )?
-        };
-        
-        let ps_blob = if let Some(ps) = ps {
-            let ps_wide: Vec<u16> = ps.encode_utf16().chain(Some(0)).collect();
-            Some(unsafe {
-                compiler.Compile(
-                    &DxcBuffer {
-                        Ptr: ps_wide.as_ptr() as *const _,
-                        Size: ps_wide.len() * 2,
-                        Encoding: 0,
-                    },
-                    Some(&[
-                        PCWSTR::from_raw(b"-E\0".as_ptr() as *const u16),
-                        PCWSTR::from_raw(b"PSMain\0".as_ptr() as *const u16),
-                        PCWSTR::from_raw(b"-T\0".as_ptr() as *const u16),
-                        PCWSTR::from_raw(b"ps_6_0\0".as_ptr() as *const u16),
-                    ]),
-                    None,
-                )?
-            })
-        } else {
-            None
-        };
-        
-        Ok((Some(vs_blob), ps_blob))
-    }
-
-    fn create_pipeline(device: &ID3D12Device) -> ID3D12PipelineState {
-        let mut pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC::default();
-        pipeline_state_desc.RasterizerState = D3D12_RASTERIZER_DESC {
-            FillMode: D3D12_FILL_MODE_SOLID,
-            CullMode: D3D12_CULL_MODE_BACK,
-            FrontCounterClockwise: true.into(),
-            DepthBias: 0 as i32,
-            DepthBiasClamp: 0 as f32,
-            SlopeScaledDepthBias: 0 as f32,
-            DepthClipEnable: false.into(),
-            MultisampleEnable: false.into(),
-            AntialiasedLineEnable: true.into(),
-            ForcedSampleCount: 0 as u32,
-            ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
-        };
-
-        let (vs, _ps) = Self::create_shader_library(
-            r#"
-            struct PSInput {
-                float4 position : SV_POSITION;
-            };
-
-            PSInput VSMain(uint vertexId : SV_VertexID) {
-                float3 vertices[3] = {
-                    float3(0.0, 0.5, 0.0),   // Top
-                    float3(-0.5, -0.5, 0.0), // Bottom left
-                    float3(0.5, -0.5, 0.0)   // Bottom right
-                };
-                PSInput output;
-                output.position = float4(vertices[vertexId], 1.0);
-                return output;
-            }
-            "#,
-            None,
-        )        .expect("Failed to compile vertex shader");
-
-        pipeline_state_desc.VS = vs.as_ref().map(|blob| D3D12_SHADER_BYTECODE {
-            pShaderBytecode: unsafe { blob.GetBufferPointer() } as *const _,
-            BytecodeLength: unsafe { blob.GetBufferSize() } as usize,
-        }).unwrap();
-
-        let pipeline_state = unsafe { device.CreateGraphicsPipelineState(&pipeline_state_desc) }
-            .expect("Failed to create pipeline state");
-
-        pipeline_state
-    }
 }
 
 impl Renderer for D3D12Renderer {
@@ -312,16 +188,30 @@ impl Renderer for D3D12Renderer {
             right: width as i32,
             bottom: height as i32,
         };
-        let vbv = D3D12_VERTEX_BUFFER_VIEW {
-            BufferLocation: unsafe { self.vertex_buffer.GetGPUVirtualAddress() },
-            SizeInBytes: (9 * std::mem::size_of::<f32>()) as u32,
-            StrideInBytes: (3 * std::mem::size_of::<f32>()) as u32,
-        };
 
         unsafe {
+            self.wait_for_previous_submission()?;
             self.command_allocator.Reset()?;
-            self.command_list
-                .Reset(&self.command_allocator, Some(&self.pipeline_state))?;
+            self.command_list.Reset(&self.command_allocator, None)?;
+
+            if self.texture_state != D3D12_RESOURCE_STATE_RENDER_TARGET {
+                let to_render_target = D3D12_RESOURCE_BARRIER {
+                    Type: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                    Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                    Anonymous: D3D12_RESOURCE_BARRIER_0 {
+                        Transition: std::mem::ManuallyDrop::new(
+                            D3D12_RESOURCE_TRANSITION_BARRIER {
+                                pResource: std::mem::ManuallyDrop::new(Some(texture.clone())),
+                                Subresource: D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                                StateBefore: self.texture_state,
+                                StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET,
+                            },
+                        ),
+                    },
+                };
+                self.command_list.ResourceBarrier(&[to_render_target]);
+                self.texture_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            }
 
             let rtv_handle = self.rtv_heap.GetCPUDescriptorHandleForHeapStart();
             self.command_list
@@ -331,15 +221,28 @@ impl Renderer for D3D12Renderer {
 
             self.command_list.RSSetViewports(&[viewport]);
             self.command_list.RSSetScissorRects(&[scissor]);
-            self.command_list
-                .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            self.command_list.IASetVertexBuffers(0, Some(&[vbv]));
-            self.command_list.DrawInstanced(3, 1, 0, 0);
+
+            let to_sampled = D3D12_RESOURCE_BARRIER {
+                Type: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                Anonymous: D3D12_RESOURCE_BARRIER_0 {
+                    Transition: std::mem::ManuallyDrop::new(D3D12_RESOURCE_TRANSITION_BARRIER {
+                        pResource: std::mem::ManuallyDrop::new(Some(texture.clone())),
+                        Subresource: D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                        StateBefore: D3D12_RESOURCE_STATE_RENDER_TARGET,
+                        StateAfter: D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                    }),
+                },
+            };
+            self.command_list.ResourceBarrier(&[to_sampled]);
+            self.texture_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
             self.command_list.Close()?;
 
             let command_list: ID3D12CommandList = self.command_list.cast()?;
             self.command_queue
                 .ExecuteCommandLists(&[Some(command_list)]);
+            self.fence_value = self.fence_value.saturating_add(1);
+            self.command_queue.Signal(&self.fence, self.fence_value)?;
 
             // Keep the state explicit for callers that may sample the texture afterwards.
             let _ = texture;
@@ -355,6 +258,17 @@ impl Renderer for D3D12Renderer {
                 Some(handle)
             }
             None => None,
+        }
+    }
+}
+
+impl Drop for D3D12Renderer {
+    fn drop(&mut self) {
+        let _ = self.wait_for_previous_submission();
+        if !self.fence_event.is_invalid() {
+            unsafe {
+                let _ = CloseHandle(self.fence_event);
+            }
         }
     }
 }
