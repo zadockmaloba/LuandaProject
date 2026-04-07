@@ -62,7 +62,7 @@ target_include_directories(LuandaEngine
 
 if(WIN32)
     # Rust staticlib on MSVC may require explicit NT native API import library.
-    target_link_libraries(LuandaEngine INTERFACE ntdll kernel32 user32 gdi32 ws2_32 userenv)
+    target_link_libraries(LuandaEngine INTERFACE ntdll kernel32 user32 gdi32 ws2_32 userenv dxcompiler)
 endif()
 
 # Add dependency to ensure Rust library is built

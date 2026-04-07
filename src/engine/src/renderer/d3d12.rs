@@ -1,16 +1,15 @@
 use std::ffi::c_void;
-use windows::core::Interface;
 use windows::Win32::Foundation::RECT;
-use windows::Win32::Graphics::{
-    Direct3D::*,
-    Direct3D12::*, 
-    Dxgi::Common::*, 
+use windows::Win32::Graphics::Direct3D;
+use windows::Win32::Graphics::{Direct3D::Dxc::*, Direct3D::*, Direct3D12::*, Dxgi::Common::*};
+use windows::core::{Interface, GUID, HRESULT, PCSTR, PCWSTR, PWSTR};
+
+use crate::renderer::{
+    LuandaBackend, LuandaExternalDevice, LuandaTextureHandle, Renderer, TextureHandle,
 };
 
-use crate::renderer::{Renderer, TextureHandle, LuandaBackend, LuandaExternalDevice, LuandaTextureHandle};
-
 pub struct D3D12Renderer {
-    device: ID3D12Device, 
+    device: ID3D12Device,
     command_queue: ID3D12CommandQueue,
     command_allocator: ID3D12CommandAllocator,
     command_list: ID3D12GraphicsCommandList,
@@ -31,13 +30,12 @@ impl D3D12Renderer {
             Flags: D3D12_COMMAND_QUEUE_FLAG_NONE,
             NodeMask: 0,
         };
-        let command_queue = unsafe {
-            device.CreateCommandQueue(&command_queue_desc)
-        }.expect("Failed to create command queue");
+        let command_queue = unsafe { device.CreateCommandQueue(&command_queue_desc) }
+            .expect("Failed to create command queue");
 
-        let command_allocator = unsafe {
-            device.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
-        }.expect("Failed to create command allocator");
+        let command_allocator =
+            unsafe { device.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT) }
+                .expect("Failed to create command allocator");
 
         let rtv_heap = unsafe {
             device.CreateDescriptorHeap(&D3D12_DESCRIPTOR_HEAP_DESC {
@@ -46,7 +44,8 @@ impl D3D12Renderer {
                 Flags: D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
                 NodeMask: 0,
             })
-        }.expect("Failed to create RTV descriptor heap");
+        }
+        .expect("Failed to create RTV descriptor heap");
 
         let pipeline_state = Self::create_pipeline(&device);
 
@@ -57,16 +56,17 @@ impl D3D12Renderer {
                 &command_allocator,
                 Some(&pipeline_state),
             )
-        }.expect("Failed to create command list");
+        }
+        .expect("Failed to create command list");
         unsafe {
             command_list.Close().expect("Failed to close command list");
         }
 
         // Create vertex buffer (triangle vertices)
         let vertices: [f32; 9] = [
-            0.0, 0.5, 0.0,   // Top
-           -0.5, -0.5, 0.0,  // Bottom left
-            0.5, -0.5, 0.0,  // Bottom right
+            0.0, 0.5, 0.0, // Top
+            -0.5, -0.5, 0.0, // Bottom left
+            0.5, -0.5, 0.0, // Bottom right
         ];
         let mut vertex_buffer: Option<ID3D12Resource> = None;
         unsafe {
@@ -87,7 +87,10 @@ impl D3D12Renderer {
                     DepthOrArraySize: 1,
                     MipLevels: 1,
                     Format: DXGI_FORMAT_UNKNOWN,
-                    SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
                     Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
                     Flags: D3D12_RESOURCE_FLAG_NONE,
                 },
@@ -95,11 +98,16 @@ impl D3D12Renderer {
                 None,
                 &mut vertex_buffer,
             )
-        }.expect("Failed to create vertex buffer");
+        }
+        .expect("Failed to create vertex buffer");
         // Copy vertex data to buffer
         let mut vertex_data_ptr: *mut f32 = std::ptr::null_mut();
         unsafe {
-            vertex_buffer.as_ref().unwrap().Map(0, None, Some(&mut vertex_data_ptr as *mut _ as *mut _)).expect("Failed to map vertex buffer");
+            vertex_buffer
+                .as_ref()
+                .unwrap()
+                .Map(0, None, Some(&mut vertex_data_ptr as *mut _ as *mut _))
+                .expect("Failed to map vertex buffer");
         };
         unsafe {
             std::ptr::copy_nonoverlapping(vertices.as_ptr(), vertex_data_ptr, vertices.len());
@@ -123,7 +131,10 @@ impl D3D12Renderer {
     //fn create_shader_library(device: &ID3D12Device) -> ID3D12PipelineLibrary {}
 
     fn ensure_texture(&mut self, width: usize, height: usize) -> anyhow::Result<()> {
-        if self.render_texture.is_some() && self.texture_width == width && self.texture_height == height {
+        if self.render_texture.is_some()
+            && self.texture_width == width
+            && self.texture_height == height
+        {
             return Ok(());
         }
 
@@ -136,7 +147,10 @@ impl D3D12Renderer {
             DepthOrArraySize: 1,
             MipLevels: 1,
             Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             Layout: D3D12_TEXTURE_LAYOUT_UNKNOWN,
             Flags: D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
         };
@@ -180,25 +194,95 @@ impl D3D12Renderer {
         Ok(())
     }
 
+    fn create_shader_library(vs: &str, ps: Option<&str>) -> anyhow::Result<(Option<ID3DBlob>, Option<ID3DBlob>)> {
+        let compiler: IDxcCompiler3 = unsafe { DxcCreateInstance(&CLSID_DxcCompiler).unwrap() };
+        
+        let vs_wide: Vec<u16> = vs.encode_utf16().chain(Some(0)).collect();
+        let vs_blob= unsafe {
+            compiler.Compile(
+                &DxcBuffer {
+                    Ptr: vs_wide.as_ptr() as *const _,
+                    Size: vs_wide.len() * 2,
+                    Encoding: 0,
+                },
+                Some(&[
+                    PCWSTR::from_raw(b"-E\0".as_ptr() as *const u16),
+                    PCWSTR::from_raw(b"VSMain\0".as_ptr() as *const u16),
+                    PCWSTR::from_raw(b"-T\0".as_ptr() as *const u16),
+                    PCWSTR::from_raw(b"vs_6_0\0".as_ptr() as *const u16),
+                ]),
+                None,
+            )?
+        };
+        
+        let ps_blob = if let Some(ps) = ps {
+            let ps_wide: Vec<u16> = ps.encode_utf16().chain(Some(0)).collect();
+            Some(unsafe {
+                compiler.Compile(
+                    &DxcBuffer {
+                        Ptr: ps_wide.as_ptr() as *const _,
+                        Size: ps_wide.len() * 2,
+                        Encoding: 0,
+                    },
+                    Some(&[
+                        PCWSTR::from_raw(b"-E\0".as_ptr() as *const u16),
+                        PCWSTR::from_raw(b"PSMain\0".as_ptr() as *const u16),
+                        PCWSTR::from_raw(b"-T\0".as_ptr() as *const u16),
+                        PCWSTR::from_raw(b"ps_6_0\0".as_ptr() as *const u16),
+                    ]),
+                    None,
+                )?
+            })
+        } else {
+            None
+        };
+        
+        Ok((Some(vs_blob), ps_blob))
+    }
+
     fn create_pipeline(device: &ID3D12Device) -> ID3D12PipelineState {
         let mut pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC::default();
-        pipeline_state_desc.RasterizerState = D3D12_RASTERIZER_DESC { 
-            FillMode: D3D12_FILL_MODE_SOLID, 
-            CullMode: D3D12_CULL_MODE_BACK, 
-            FrontCounterClockwise: true.into(), 
-            DepthBias: 0 as i32, 
-            DepthBiasClamp: 0 as f32, 
-            SlopeScaledDepthBias: 0 as f32, 
-            DepthClipEnable: false.into(), 
-            MultisampleEnable: false.into(), 
-            AntialiasedLineEnable: true.into(), 
-            ForcedSampleCount: 0 as u32, 
-            ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+        pipeline_state_desc.RasterizerState = D3D12_RASTERIZER_DESC {
+            FillMode: D3D12_FILL_MODE_SOLID,
+            CullMode: D3D12_CULL_MODE_BACK,
+            FrontCounterClockwise: true.into(),
+            DepthBias: 0 as i32,
+            DepthBiasClamp: 0 as f32,
+            SlopeScaledDepthBias: 0 as f32,
+            DepthClipEnable: false.into(),
+            MultisampleEnable: false.into(),
+            AntialiasedLineEnable: true.into(),
+            ForcedSampleCount: 0 as u32,
+            ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
         };
 
-        let pipeline_state = unsafe {
-            device.CreateGraphicsPipelineState(&pipeline_state_desc)
-        }.expect("Failed to create pipeline state");
+        let (vs, _ps) = Self::create_shader_library(
+            r#"
+            struct PSInput {
+                float4 position : SV_POSITION;
+            };
+
+            PSInput VSMain(uint vertexId : SV_VertexID) {
+                float3 vertices[3] = {
+                    float3(0.0, 0.5, 0.0),   // Top
+                    float3(-0.5, -0.5, 0.0), // Bottom left
+                    float3(0.5, -0.5, 0.0)   // Bottom right
+                };
+                PSInput output;
+                output.position = float4(vertices[vertexId], 1.0);
+                return output;
+            }
+            "#,
+            None,
+        )        .expect("Failed to compile vertex shader");
+
+        pipeline_state_desc.VS = vs.as_ref().map(|blob| D3D12_SHADER_BYTECODE {
+            pShaderBytecode: unsafe { blob.GetBufferPointer() } as *const _,
+            BytecodeLength: unsafe { blob.GetBufferSize() } as usize,
+        }).unwrap();
+
+        let pipeline_state = unsafe { device.CreateGraphicsPipelineState(&pipeline_state_desc) }
+            .expect("Failed to create pipeline state");
 
         pipeline_state
     }
@@ -270,7 +354,7 @@ impl Renderer for D3D12Renderer {
                 let handle = TextureHandle::D3D12(tex.as_raw());
                 Some(handle)
             }
-            None => None
+            None => None,
         }
     }
 }
@@ -360,4 +444,3 @@ pub extern "C" fn luanda_renderer_destroy(renderer: *mut c_void) {
         unsafe { drop(Box::from_raw(renderer as *mut D3D12Renderer)) };
     });
 }
-
