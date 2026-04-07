@@ -10,6 +10,7 @@
 #include <renderer_metal.hpp>
 #elif defined(WIN32)
 #include <d3d12.h>
+#include <renderer.h>
 #else
 #error "Unsupported platform"
 #endif
@@ -20,9 +21,30 @@ struct ViewPortWidget::ViewPortWidgetPrivate {
     const char *id = nullptr;
     void *renderer = nullptr;
     SceneGraph *scene_graph = nullptr;
+    LuandaTextureHandle texture_handle = {
+#if defined(WIN32)
+        LUANDA_BACKEND_D3D12,
+#elif defined(__APPLE__)
+        LUANDA_BACKEND_METAL,
+#else
+#error "Unsupported platform"
+#endif
+        nullptr
+    };
+    LuandaExternalDevice external_device = {
+#if defined(WIN32)
+        LUANDA_BACKEND_D3D12,
+#elif defined(__APPLE__)
+        LUANDA_BACKEND_METAL,
+#else
+#error "Unsupported platform"
+#endif
+        nullptr
+    };
 
     ViewPortWidgetPrivate(const char *id, GraphicsDevice *device) : id(id) {
-        renderer = luanda_renderer_create(device);
+        external_device.device = device;
+        renderer = luanda_renderer_create((int)external_device.backend, &external_device);
         scene_graph = create_scene_graph();
     }
 
@@ -44,11 +66,12 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
     assert(_p != nullptr);
     assert(_p->id != nullptr);
 
-    luanda_renderer_render(_p->renderer, (size_t)width, (size_t)height);
+    luanda_renderer_draw(_p->renderer, (size_t)width, (size_t)height);
 #if defined(__APPLE__)
     MTL::Texture *game_texture = luanda_renderer_get_texture(_p->renderer);
 #elif defined(WIN32)
-    ID3D12Resource *game_texture = (ID3D12Resource *)luanda_renderer_get_texture(_p->renderer);
+    luanda_renderer_get_texture(_p->renderer, &_p->texture_handle);
+    ID3D12Resource *game_texture = (ID3D12Resource *)_p->texture_handle.handle;
 #endif
 
     ImGui::Begin((const char *)_p->id);

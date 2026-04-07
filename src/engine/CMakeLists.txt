@@ -60,6 +60,11 @@ target_include_directories(LuandaEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/metal-cpp
 )
 
+if(WIN32)
+    # Rust staticlib on MSVC may require explicit NT native API import library.
+    target_link_libraries(LuandaEngine INTERFACE ntdll kernel32 user32 gdi32 ws2_32 userenv)
+endif()
+
 # Add dependency to ensure Rust library is built
 add_dependencies(LuandaEngine LuandaEngine_build)
 
