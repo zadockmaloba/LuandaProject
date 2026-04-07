@@ -51,4 +51,46 @@ PRIVATE
   ImGuiTextEditor
   LuandaEngine
   ${PLATFORM_SPECIFIC_LIBS}
+PUBLIC
+  dxcompiler
 )
+
+if(WIN32)
+ # Copy discovered runtime DLL dependencies next to the executable.
+  # add_custom_command(TARGET LuandaEditor POST_BUILD
+  #   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+  #     $<TARGET_RUNTIME_DLLS:LuandaEditor>
+  #     $<TARGET_FILE_DIR:LuandaEditor>
+  #   COMMAND_EXPAND_LISTS
+  # )
+  # dxcompiler/dxil may be linked through import libs but still not deployed.
+  set(DXCOMPILER_SEARCH_HINTS
+    "$ENV{VCToolsRedistDir}/x64/Microsoft.D3D.DXC"
+    "$ENV{WindowsSdkVerBinPath}/x64"
+    "$ENV{WindowsSdkBinPath}/x64"
+  )
+  file(GLOB WINDOWS_SDK_BIN_X64 "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
+  list(APPEND DXCOMPILER_SEARCH_HINTS ${WINDOWS_SDK_BIN_X64})
+
+  find_file(DXCOMPILER_DLL NAMES dxcompiler.dll HINTS ${DXCOMPILER_SEARCH_HINTS})
+  if(DXCOMPILER_DLL)
+    add_custom_command(TARGET LuandaEditor POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${DXCOMPILER_DLL}"
+        $<TARGET_FILE_DIR:LuandaEditor>
+    )
+  else()
+    message(WARNING "dxcompiler.dll was not found in known SDK/VS paths; LuandaEditor may fail to start.")
+  endif()
+
+  find_file(DXIL_DLL NAMES dxil.dll HINTS ${DXCOMPILER_SEARCH_HINTS})
+  if(DXIL_DLL)
+    add_custom_command(TARGET LuandaEditor POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${DXIL_DLL}"
+        $<TARGET_FILE_DIR:LuandaEditor>
+    )
+  else()
+    message(WARNING "dxil.dll was not found in known SDK/VS paths; DXC shader compilation may fail.")
+  endif()
+endif()
