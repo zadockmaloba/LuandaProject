@@ -79,7 +79,15 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
     assert(_p != nullptr);
     assert(_p->id != nullptr);
 
-    luanda_renderer_draw(_p->renderer, (size_t)width, (size_t)height);
+    ImGui::Begin((const char *)_p->id);
+
+    ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+    const unsigned int targetWidth =
+        (viewportSize.x > 1.0f) ? static_cast<unsigned int>(viewportSize.x) : (width > 0 ? width : 1u);
+    const unsigned int targetHeight =
+        (viewportSize.y > 1.0f) ? static_cast<unsigned int>(viewportSize.y) : (height > 0 ? height : 1u);
+
+    luanda_renderer_draw(_p->renderer, (size_t)targetWidth, (size_t)targetHeight);
 #if defined(__APPLE__)
     MTL::Texture *game_texture = luanda_renderer_get_texture(_p->renderer);
 #elif defined(WIN32)
@@ -105,16 +113,13 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
     }
 #endif
 
-    ImGui::Begin((const char *)_p->id);
 #if defined(__APPLE__)
     if (game_texture != nullptr) {
-        ImVec2 viewportSize = ImGui::GetContentRegionAvail();
         // Display the texture in the ImGui window
         ImGui::Image((ImTextureID)game_texture, viewportSize);
     }
 #elif defined(WIN32)
     if (game_texture_id != (ImTextureID)0) {
-        ImVec2 viewportSize = ImGui::GetContentRegionAvail();
         ImGui::Image(game_texture_id, viewportSize);
     }
 #endif
