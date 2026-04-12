@@ -7,14 +7,14 @@
 #if defined(__APPLE__)
 #include <Metal/Metal.hpp>
 #include <Metal/MTLTexture.hpp>
-#include <renderer_metal.hpp>
 #elif defined(WIN32)
 #include <d3d12.h>
 #include "imgui_dx12_texture_bridge.hpp"
-#include <renderer.h>
 #else
 #error "Unsupported platform"
 #endif
+
+#include <renderer.h>
 
 namespace LuandaEditor {
 
@@ -51,7 +51,7 @@ struct ViewPortWidget::ViewPortWidgetPrivate {
 
     ViewPortWidgetPrivate(const char *id, GraphicsDevice *device) : id(id) {
         external_device.device = device;
-        renderer = luanda_renderer_create((int)external_device.backend, &external_device);
+        renderer = luanda_renderer_create(&external_device);
         scene_graph = create_scene_graph();
     }
 
@@ -97,7 +97,8 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
 
     luanda_renderer_draw(_p->renderer, (size_t)renderWidth, (size_t)renderHeight);
 #if defined(__APPLE__)
-    MTL::Texture *game_texture = luanda_renderer_get_texture(_p->renderer);
+    luanda_renderer_get_texture(_p->renderer, &_p->texture_handle);
+    MTL::Texture *game_texture = (MTL::Texture *)_p->texture_handle.handle;
 #elif defined(WIN32)
     luanda_renderer_get_texture(_p->renderer, &_p->texture_handle);
     ID3D12Resource *game_texture = (ID3D12Resource *)_p->texture_handle.handle;

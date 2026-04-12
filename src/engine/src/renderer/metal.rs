@@ -1,3 +1,4 @@
+use crate::renderer::{Renderer, TextureHandle, LuandaBackend, LuandaTextureHandle, LuandaExternalDevice};
 use core::ffi::c_void;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -66,7 +67,7 @@ impl MetalRenderer {
                 )
             };
             descriptor.setUsage(MTLTextureUsage::RenderTarget | MTLTextureUsage::ShaderRead);
-            
+
             self.render_texture = self.device.newTextureWithDescriptor(&descriptor);
             self.texture_width = width;
             self.texture_height = height;
@@ -74,12 +75,12 @@ impl MetalRenderer {
         }
     }
 
-    pub fn render_to_texture(&mut self, width: usize, height: usize) {
+    fn render_to_texture_p(&mut self, width: usize, height: usize) {
         // Ensure texture exists and is the right size
         self.ensure_texture(width, height);
-        
+
         let texture = self.render_texture.as_ref().expect("Render texture not created");
-        
+
         // Create render pass descriptor for our texture
         let render_pass_descriptor = MTLRenderPassDescriptor::new();
         unsafe {
@@ -94,7 +95,7 @@ impl MetalRenderer {
                 alpha: 1.0,
             });
         }
-        
+
         let command_buffer = self.command_queue.commandBuffer()
             .expect("Failed to create command buffer");
 
@@ -117,8 +118,8 @@ impl MetalRenderer {
         encoder.endEncoding();
         command_buffer.commit();
     }
-    
-    pub fn get_texture(&self) -> Option<*mut ProtocolObject<dyn MTLTexture>> {
+
+    fn get_texture(&self) -> Option<*mut ProtocolObject<dyn MTLTexture>> {
         self.render_texture.as_ref().map(|t| Retained::as_ptr(t) as *mut _)
     }
 
@@ -187,9 +188,21 @@ impl MetalRenderer {
     }
 }
 
+impl Renderer for MetalRenderer {
+    fn render_to_texture(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
+        self.render_to_texture_p(width as usize, height as usize);
+        Ok(())
+    }
+
+    fn get_texture_handle(&self) -> Option<TextureHandle> {
+        self.get_texture()
+            .map(|t| TextureHandle::Metal(t as *mut core::ffi::c_void))
+    }
+}
+
 // C FFI exports
 #[unsafe(no_mangle)]
-pub extern "C" fn luanda_renderer_create(
+pub extern "C" fn luanda_renderer_create_old(
     device: *mut ProtocolObject<dyn MTLDevice>,
 ) -> *mut MetalRenderer {
     let retained_device = unsafe {
@@ -201,17 +214,56 @@ pub extern "C" fn luanda_renderer_create(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn luanda_renderer_render(
-    renderer: *mut MetalRenderer,
-    width: usize,
-    height: usize,
-) {
-    let renderer = unsafe { &mut *renderer };
-    renderer.render_to_texture(width, height);
+pub extern "C" fn luanda_renderer_create(
+    external_device: *mut LuandaExternalDevice,
+) -> *mut c_void {
+    if external_device.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let external_device = unsafe { &*external_device };
+    if external_device.backend != LuandaBackend::Metal {
+        return std::ptr::null_mut();
+    }
+
+    if external_device.device.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let creation_result = std::panic::catch_unwind(|| {
+        let device_ptr = external_device.device as *mut ProtocolObject<dyn MTLDevice>;
+        let retained_device = unsafe {
+            let device = NonNull::new(device_ptr).expect("Null device");
+            Retained::retain(device.as_ptr()).expect("Failed to retain device")
+        };
+        let renderer = MetalRenderer::new(retained_device);
+        Box::into_raw(Box::new(renderer)) as *mut c_void
+    });
+
+    match creation_result {
+        Ok(renderer_ptr) => renderer_ptr,
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn luanda_renderer_get_texture(
+pub extern "C" fn luanda_renderer_draw(renderer: *mut c_void, width: u32, height: u32) {
+    if renderer.is_null() {
+        return;
+    }
+
+    let draw_result = std::panic::catch_unwind(|| {
+        let renderer = unsafe { &mut *(renderer as *mut MetalRenderer) };
+        let _ = renderer.render_to_texture(width, height);
+    });
+
+    if draw_result.is_err() {
+        return;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn luanda_renderer_get_texture_old(
     renderer: *mut MetalRenderer,
 ) -> *mut ProtocolObject<dyn MTLTexture> {
     let renderer = unsafe { &*renderer };
@@ -219,7 +271,34 @@ pub extern "C" fn luanda_renderer_get_texture(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn luanda_renderer_destroy(renderer: *mut MetalRenderer) {
+pub extern "C" fn luanda_renderer_get_texture(
+    renderer: *mut c_void,
+    out_texture: *mut LuandaTextureHandle,
+) -> i32 {
+    if renderer.is_null() || out_texture.is_null() {
+        return 0;
+    }
+
+    let texture_result = std::panic::catch_unwind(|| {
+        let renderer = unsafe { &*(renderer as *const MetalRenderer) };
+        match renderer.get_texture_handle() {
+            Some(TextureHandle::Metal(handle)) if !handle.is_null() => {
+                unsafe {
+                    (*out_texture).backend = LuandaBackend::Metal;
+                    (*out_texture).handle = handle;
+                }
+                1
+            }
+            _ => 0,
+        }
+    });
+
+    texture_result.unwrap_or_default()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn luanda_renderer_destroy(renderer: *mut c_void) {
+    let renderer = unsafe { &mut *(renderer as *mut MetalRenderer) };
     println!("Destroying MetalRenderer");
     unsafe { drop(Box::from_raw(renderer)) };
 }

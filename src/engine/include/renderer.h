@@ -22,7 +22,7 @@ typedef struct LuandaExternalDevice {
 extern "C" {
 #endif
 
-void* luanda_renderer_create(int backend, LuandaExternalDevice* external_device);
+void* luanda_renderer_create(LuandaExternalDevice* external_device);
 void  luanda_renderer_draw(void* renderer, uint32_t width, uint32_t height);
 int   luanda_renderer_get_texture(void* renderer, LuandaTextureHandle* out_texture);
 void  luanda_renderer_destroy(void* renderer);

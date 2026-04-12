@@ -503,7 +503,6 @@ impl Drop for D3D12Renderer {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn luanda_renderer_create(
-    backend: i32,
     external_device: *mut LuandaExternalDevice,
 ) -> *mut c_void {
     if external_device.is_null() {
@@ -511,7 +510,7 @@ pub extern "C" fn luanda_renderer_create(
     }
 
     let external_device = unsafe { &*external_device };
-    if backend != LuandaBackend::D3D12 as i32 || external_device.backend != LuandaBackend::D3D12 {
+    if external_device.backend != LuandaBackend::D3D12 {
         return std::ptr::null_mut();
     }
 
