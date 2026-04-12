@@ -51,8 +51,6 @@ PRIVATE
   ImGuiTextEditor
   LuandaEngine
   ${PLATFORM_SPECIFIC_LIBS}
-PUBLIC
-  dxcompiler
 )
 
 if(WIN32)
