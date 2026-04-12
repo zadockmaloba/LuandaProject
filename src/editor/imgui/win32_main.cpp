@@ -112,6 +112,18 @@ bool luanda_imgui_dx12_alloc_srv(
 
     g_pd3dSrvDescHeapAlloc.Alloc(out_cpu, out_gpu);
 
+    return luanda_imgui_dx12_write_srv(resource, *out_cpu);
+}
+
+bool luanda_imgui_dx12_write_srv(
+    ID3D12Resource* resource,
+    D3D12_CPU_DESCRIPTOR_HANDLE cpu)
+{
+    if (resource == nullptr)
+        return false;
+    if (g_pd3dDevice == nullptr || g_pd3dSrvDescHeap == nullptr)
+        return false;
+
     D3D12_RESOURCE_DESC resource_desc = resource->GetDesc();
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
     srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -122,7 +134,7 @@ bool luanda_imgui_dx12_alloc_srv(
     srv_desc.Texture2D.PlaneSlice = 0;
     srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-    g_pd3dDevice->CreateShaderResourceView(resource, &srv_desc, *out_cpu);
+    g_pd3dDevice->CreateShaderResourceView(resource, &srv_desc, cpu);
     return true;
 }
 

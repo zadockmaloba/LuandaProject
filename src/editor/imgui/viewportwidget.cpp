@@ -87,7 +87,15 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
     const unsigned int targetHeight =
         (viewportSize.y > 1.0f) ? static_cast<unsigned int>(viewportSize.y) : (height > 0 ? height : 1u);
 
-    luanda_renderer_draw(_p->renderer, (size_t)targetWidth, (size_t)targetHeight);
+    // Bucket render target sizes so drag-resizing does not recreate textures every pixel.
+    constexpr unsigned int kResizeBucket = 64u;
+    auto round_up_bucket = [&](unsigned int value) {
+        return ((value + kResizeBucket - 1u) / kResizeBucket) * kResizeBucket;
+    };
+    const unsigned int renderWidth = round_up_bucket(targetWidth);
+    const unsigned int renderHeight = round_up_bucket(targetHeight);
+
+    luanda_renderer_draw(_p->renderer, (size_t)renderWidth, (size_t)renderHeight);
 #if defined(__APPLE__)
     MTL::Texture *game_texture = luanda_renderer_get_texture(_p->renderer);
 #elif defined(WIN32)
@@ -95,14 +103,13 @@ void ViewPortWidget::show(unsigned int width, unsigned int height) {
     ID3D12Resource *game_texture = (ID3D12Resource *)_p->texture_handle.handle;
     ImTextureID game_texture_id = (ImTextureID)0;
     if (game_texture != nullptr) {
-        if (!_p->has_texture_srv || _p->last_texture_resource != game_texture) {
-            if (_p->has_texture_srv) {
-                luanda_imgui_dx12_free_srv(_p->texture_srv_cpu, _p->texture_srv_gpu);
-                _p->has_texture_srv = false;
-            }
-
+        if (!_p->has_texture_srv) {
             if (luanda_imgui_dx12_alloc_srv(game_texture, &_p->texture_srv_cpu, &_p->texture_srv_gpu)) {
                 _p->has_texture_srv = true;
+                _p->last_texture_resource = game_texture;
+            }
+        } else if (_p->last_texture_resource != game_texture) {
+            if (luanda_imgui_dx12_write_srv(game_texture, _p->texture_srv_cpu)) {
                 _p->last_texture_resource = game_texture;
             }
         }
