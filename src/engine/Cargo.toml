@@ -16,7 +16,7 @@ objc2-metal = "0.3.2"
 objc2-foundation = "0.3.2"
 objc2 = "0.6.4"
 
-[dependencies.windows]
+[target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "*"
 features = [
     "Win32_Foundation",
