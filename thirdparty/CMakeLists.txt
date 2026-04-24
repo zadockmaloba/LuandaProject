@@ -25,6 +25,15 @@ if (${LUANDA_FRONTEND_LIB} STREQUAL "ImGUI")
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_metal.h
       ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_osx.h
     )
+  elseif(UNIX)
+    set(BACKEND_SOURCES
+      ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_sdl3.cpp
+    )
+    set(BACKEND_HEADERS
+      ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.h
+      ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_sdl3.h
+    )
   else()
     message(FATAL_ERROR "Platform not yet supported")
   endif()

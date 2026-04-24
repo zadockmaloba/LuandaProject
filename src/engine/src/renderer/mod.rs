@@ -4,6 +4,9 @@ pub mod d3d12;
 #[cfg(target_os = "macos")]
 pub mod metal;
 
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+pub mod vulkan;
+
 // use crate::scenegraph::SceneGraph;
 
 pub enum Backend {

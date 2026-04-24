@@ -8,6 +8,8 @@
 #include <Metal/Metal.hpp>
 #elif defined(WIN32)
 #include <d3d12.h>
+#elif defined(__linux__) || defined(__unix__)
+#include <vulkan/vulkan.h>
 #else
 #error "Unsupported platform"
 #endif

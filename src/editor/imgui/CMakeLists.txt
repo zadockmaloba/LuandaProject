@@ -19,6 +19,13 @@ elseif(APPLE)
     "$<LINK_LIBRARY:FRAMEWORK,QuartzCore>"
     "$<LINK_LIBRARY:FRAMEWORK,GameController>"
   )
+elseif(UNIX)
+  set(PLATFORM_SPECIFIC_SRC unix_main.cpp)
+  set(PLATFORM_SPECIFIC_LIBS
+    SDL3
+    vulkan
+    pthread
+  )
 else()
   message(FATAL_ERROR "Platform not supported yet.")
 endif()

@@ -10,6 +10,8 @@
 #elif defined(WIN32)
 #include <d3d12.h>
 #include "imgui_dx12_texture_bridge.hpp"
+#elif defined(__linux__) || defined(__unix__)
+#include <vulkan/vulkan.h>
 #else
 #error "Unsupported platform"
 #endif
@@ -27,6 +29,8 @@ struct ViewPortWidget::ViewPortWidgetPrivate {
         LUANDA_BACKEND_D3D12,
 #elif defined(__APPLE__)
         LUANDA_BACKEND_METAL,
+#elif defined(__linux__) || defined(__unix__)
+        LUANDA_BACKEND_VULKAN,
 #else
 #error "Unsupported platform"
 #endif
@@ -37,6 +41,8 @@ struct ViewPortWidget::ViewPortWidgetPrivate {
         LUANDA_BACKEND_D3D12,
 #elif defined(__APPLE__)
         LUANDA_BACKEND_METAL,
+#elif defined(__linux__) || defined(__unix__)
+        LUANDA_BACKEND_VULKAN,
 #else
 #error "Unsupported platform"
 #endif

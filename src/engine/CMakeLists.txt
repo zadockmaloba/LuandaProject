@@ -2,7 +2,15 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Find Cargo (Rust build tool)
-find_program(CARGO_EXECUTABLE cargo REQUIRED)
+find_program(CARGO_EXECUTABLE cargo REQUIRED
+    HINTS
+        $ENV{CARGO_HOME}/bin
+        $ENV{RUSTUP_HOME}/bin
+        $ENV{HOME}/.cargo/bin
+        $ENV{USERPROFILE}/.cargo/bin
+        /usr/bin
+        /usr/local/bin
+)
 
 if(NOT CARGO_EXECUTABLE)
     message(FATAL_ERROR "Cargo not found. Please install Rust toolchain from https://rustup.rs/")
