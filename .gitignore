@@ -130,3 +130,7 @@ target
 *.swiftformat.yml
 *.swiftlint
 *.swiftlint.yml
+
+# === ImGui generated files ===
+*.ini
+imgui.ini
