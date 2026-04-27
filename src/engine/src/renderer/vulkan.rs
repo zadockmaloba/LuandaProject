@@ -2,7 +2,7 @@ use std::ffi::c_void;
 use std::sync::Arc;
 
 use vulkano::{
-    VulkanLibrary, VulkanObject,
+    Handle, VulkanLibrary, VulkanObject,
     command_buffer::{
         AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassBeginInfo,
         SubpassContents, SubpassEndInfo,
@@ -283,7 +283,7 @@ impl Renderer for VulkanRenderer {
         };
 
         let mut builder = AutoCommandBufferBuilder::primary(
-            &self.command_buffer_allocator,
+            self.command_buffer_allocator.clone(),
             self.queue.queue_family_index(),
             CommandBufferUsage::OneTimeSubmit,
         )

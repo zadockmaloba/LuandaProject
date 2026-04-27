@@ -25,6 +25,7 @@ elseif(UNIX)
     SDL3
     vulkan
     pthread
+    xcb
   )
 else()
   message(FATAL_ERROR "Platform not supported yet.")
