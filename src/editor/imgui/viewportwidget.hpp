@@ -7,8 +7,8 @@ typedef MTL::Device GraphicsDevice;
 struct ID3D12Device;
 typedef ID3D12Device GraphicsDevice;
 #elif defined(__linux__) || defined(__unix__)
-struct VkInstance_T;
-typedef VkInstance_T* GraphicsDevice;
+#include <vulkan/vulkan.h>
+typedef VkInstance GraphicsDevice;
 #else
 #error "Unsupported platform"
 #endif
